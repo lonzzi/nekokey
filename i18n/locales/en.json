@@ -1,0 +1,17 @@
+{
+  "common": {
+    "login": "Login",
+    "ok": "OK"
+  },
+  "error": {
+    "title": "Error",
+    "authProcessError": "Error during authentication process:",
+    "loginFailed": "Login failed, please try again",
+    "enterServerAddress": "Please enter server address",
+    "authProcessCanceled": "Authentication process canceled",
+    "tokenFetchFailed": "Failed to fetch token"
+  },
+  "placeholder": {
+    "serverAddress": "Misskey Server Address"
+  }
+}

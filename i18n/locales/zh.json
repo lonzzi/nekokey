@@ -1,0 +1,17 @@
+{
+  "common": {
+    "login": "登录",
+    "ok": "确定"
+  },
+  "error": {
+    "title": "错误",
+    "authProcessError": "认证过程发生错误:",
+    "loginFailed": "登录失败，请重试",
+    "enterServerAddress": "请输入服务器地址",
+    "authProcessCanceled": "认证被取消",
+    "tokenFetchFailed": "获取令牌失败"
+  },
+  "placeholder": {
+    "serverAddress": "Misskey 服务器地址"
+  }
+}

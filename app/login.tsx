@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useMutation } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const requestPermission = [
@@ -52,11 +54,55 @@ const requestPermission = [
 ].join(',');
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [server, setServer] = useState('');
+
+  const loginMutation = useMutation({
+    mutationFn: async (processedServer: string) => {
+      const sessionToken = Crypto.randomUUID();
+      const authUrl = new URL(`${processedServer}/miauth/${sessionToken}`);
+      authUrl.searchParams.set('name', 'nekokey');
+      authUrl.searchParams.set('permission', requestPermission);
+      authUrl.searchParams.set('callback', Linking.createURL('/miauth'));
+
+      const result = await WebBrowser.openAuthSessionAsync(
+        authUrl.toString(),
+        Linking.createURL('/miauth'),
+      );
+
+      if (result.type !== 'success') {
+        throw new Error(t('error.authProcessCanceled'));
+      }
+
+      const response = await fetch(`${processedServer}/api/miauth/${sessionToken}/check`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (!data.token) {
+        throw new Error(t('error.tokenFetchFailed'));
+      }
+
+      return { token: data.token, server: processedServer };
+    },
+    onSuccess: async (data) => {
+      await AsyncStorage.setItem('server', data.server);
+      await AsyncStorage.setItem('token', data.token);
+      router.replace('/(tabs)');
+    },
+    onError: (error) => {
+      console.error(t('error.authProcessError'), error);
+      Alert.alert(t('error.title'), t('error.loginFailed'), [
+        { text: t('common.ok'), style: 'default' },
+      ]);
+    },
+  });
 
   const handleServerLogin = async () => {
     if (!server) {
-      Alert.alert('错误', '请输入服务器地址', [{ text: '确定', style: 'default' }]);
+      Alert.alert(t('error.title'), t('error.enterServerAddress'), [
+        { text: t('common.ok'), style: 'default' },
+      ]);
       return;
     }
 
@@ -65,37 +111,7 @@ export default function LoginScreen() {
       processedServer = `https://${processedServer}`;
     }
 
-    try {
-      // 创建认证 URL
-      const sessionToken = Crypto.randomUUID();
-      const authUrl = new URL(`${processedServer}/miauth/${sessionToken}`);
-      authUrl.searchParams.set('name', 'nekokey');
-      authUrl.searchParams.set('permission', requestPermission);
-      authUrl.searchParams.set('callback', Linking.createURL('/miauth'));
-
-      // 使用 WebBrowser 打开认证链接
-      const result = await WebBrowser.openAuthSessionAsync(
-        authUrl.toString(),
-        Linking.createURL('/miauth'),
-      );
-
-      if (result.type === 'success') {
-        // 验证认证结果
-        const response = await fetch(`${processedServer}/api/miauth/${sessionToken}/check`, {
-          method: 'POST',
-        });
-
-        const data = await response.json();
-        if (data.token) {
-          console.log('认证成功，获取到令牌', data.token);
-          await AsyncStorage.setItem('server', processedServer);
-          await AsyncStorage.setItem('token', data.token);
-          router.replace('/(tabs)');
-        }
-      }
-    } catch (error) {
-      console.error('认证过程发生错误:', error);
-    }
+    loginMutation.mutate(processedServer);
   };
 
   return (
@@ -110,7 +126,7 @@ export default function LoginScreen() {
 
       <TextInput
         style={styles.input}
-        placeholder="Misskey 服务器地址"
+        placeholder={t('placeholder.serverAddress')}
         value={server}
         onChangeText={setServer}
         autoCapitalize="none"
@@ -118,7 +134,7 @@ export default function LoginScreen() {
       />
 
       <TouchableOpacity style={styles.button} onPress={handleServerLogin}>
-        <Text style={styles.buttonText}>登录</Text>
+        <Text style={styles.buttonText}>{t('common.login')}</Text>
       </TouchableOpacity>
     </View>
   );
