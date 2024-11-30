@@ -1,5 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
+import * as NavigationBar from 'expo-navigation-bar';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -13,6 +14,8 @@ import { ApiProvider } from '@/lib/contexts/ApiContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import '../i18n/config';
+
+import { Platform } from 'react-native';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -40,6 +43,14 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  useEffect(() => {
+    // set the navigation bar to be transparent
+    if (Platform.OS === 'android') {
+      NavigationBar.setPositionAsync('absolute');
+      NavigationBar.setBackgroundColorAsync('transparent');
+    }
+  }, []);
+
   if (!loaded) {
     return null;
   }
@@ -61,7 +72,7 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="+not-found" />
             </Stack>
-            <StatusBar style="auto" />
+            <StatusBar style="auto" backgroundColor="transparent" translucent={true} />
           </ThemeProvider>
         </ApiProvider>
       </QueryClientProvider>
