@@ -63,11 +63,11 @@ export default function LoginScreen() {
       const authUrl = new URL(`${processedServer}/miauth/${sessionToken}`);
       authUrl.searchParams.set('name', 'nekokey');
       authUrl.searchParams.set('permission', requestPermission);
-      authUrl.searchParams.set('callback', Linking.createURL('/miauth'));
+      authUrl.searchParams.set('callback', Linking.createURL('/login'));
 
       const result = await WebBrowser.openAuthSessionAsync(
         authUrl.toString(),
-        Linking.createURL('/miauth'),
+        Linking.createURL('/login'),
       );
 
       if (result.type !== 'success') {
