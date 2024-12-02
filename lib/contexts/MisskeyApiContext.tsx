@@ -2,14 +2,14 @@ import { createApi } from '@/lib/api';
 import { api as MisskeyApi } from 'misskey-js';
 import { createContext, ReactNode, useCallback, useContext, useState } from 'react';
 
-interface ApiContextType {
+interface MisskeyApiContextType {
   api: MisskeyApi.APIClient | null;
   setApi: (token: string, host: string) => void;
 }
 
-const ApiContext = createContext<ApiContextType | undefined>(undefined);
+const MisskeyApiContext = createContext<MisskeyApiContextType | undefined>(undefined);
 
-export function ApiProvider({ children }: { children: ReactNode }) {
+export function MisskeyApiProvider({ children }: { children: ReactNode }) {
   const [api, setApiInstance] = useState<MisskeyApi.APIClient | null>(null);
 
   const setApi = useCallback((token: string, host: string) => {
@@ -17,13 +17,15 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     setApiInstance(newApi);
   }, []);
 
-  return <ApiContext.Provider value={{ api, setApi }}>{children}</ApiContext.Provider>;
+  return (
+    <MisskeyApiContext.Provider value={{ api, setApi }}>{children}</MisskeyApiContext.Provider>
+  );
 }
 
-export function useApi() {
-  const context = useContext(ApiContext);
+export function useMisskeyApi() {
+  const context = useContext(MisskeyApiContext);
   if (context === undefined) {
-    throw new Error('useApi must be used within an ApiProvider');
+    throw new Error('useMisskeyApi must be used within an MisskeyApiProvider');
   }
   return context;
 }

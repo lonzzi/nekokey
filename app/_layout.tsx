@@ -10,7 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { ApiProvider } from '@/lib/contexts/ApiContext';
+import { MisskeyApiProvider } from '@/lib/contexts/MisskeyApiContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import '../i18n/config';
@@ -58,7 +58,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <ApiProvider>
+        <MisskeyApiProvider>
           <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
             <Stack>
               <Stack.Screen
@@ -74,7 +74,7 @@ export default function RootLayout() {
             </Stack>
             <StatusBar style="auto" backgroundColor="transparent" translucent={true} />
           </ThemeProvider>
-        </ApiProvider>
+        </MisskeyApiProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
