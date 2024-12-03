@@ -4,7 +4,7 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import 'react-native-reanimated';
@@ -15,6 +15,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import '../i18n/config';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -27,16 +28,19 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  const [authInfo, setAuthInfo] = useState({ token: '', server: '' });
 
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
-      // 检查登录状态，如果未登录则跳转到登录页
       const checkAuth = async () => {
-        // 这里添加检查登录状态的逻辑
-        const isLoggedIn = false; // 示例：替换为实际的登录状态检查
-        if (!isLoggedIn) {
-          router.replace('/login');
+        const token = await AsyncStorage.getItem('token');
+        const server = await AsyncStorage.getItem('server');
+
+        if (!token || !server) {
+          router.replace('/auth');
+        } else {
+          setAuthInfo({ token, server });
         }
       };
       checkAuth();
@@ -58,11 +62,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <MisskeyApiProvider>
+        <MisskeyApiProvider initialToken={authInfo.token} initialServer={authInfo.server}>
           <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
             <Stack>
               <Stack.Screen
-                name="login"
+                name="auth"
                 options={{
                   headerShown: false,
                   // 防止用户通过返回按钮回到登录页

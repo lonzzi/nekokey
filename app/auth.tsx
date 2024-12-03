@@ -54,7 +54,7 @@ const requestPermission = [
   'write:votes',
 ].join(',');
 
-export default function LoginScreen() {
+export default function AuthScreen() {
   const { t } = useTranslation();
   const [server, setServer] = useState('');
   const { setApi } = useMisskeyApi();
@@ -65,11 +65,11 @@ export default function LoginScreen() {
       const authUrl = new URL(`${processedServer}/miauth/${sessionToken}`);
       authUrl.searchParams.set('name', 'nekokey');
       authUrl.searchParams.set('permission', requestPermission);
-      authUrl.searchParams.set('callback', Linking.createURL('/login'));
+      authUrl.searchParams.set('callback', Linking.createURL('/auth'));
 
       const result = await WebBrowser.openAuthSessionAsync(
         authUrl.toString(),
-        Linking.createURL('/login'),
+        Linking.createURL('/auth'),
       );
 
       if (result.type !== 'success') {
