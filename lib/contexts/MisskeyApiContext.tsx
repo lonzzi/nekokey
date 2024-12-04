@@ -1,6 +1,11 @@
-import { createApi } from '@/lib/api';
+import { misskeyClient as globalApi, initMisskeyClient } from '@/lib/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api as MisskeyApi } from 'misskey-js';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+
+const removeProtocol = (host: string): string => {
+  return host.replace(/^(https?:\/\/)/, '');
+};
 
 interface MisskeyApiContextType {
   api: MisskeyApi.APIClient | null;
@@ -21,8 +26,19 @@ export function MisskeyApiProvider({
   const [api, setApiInstance] = useState<MisskeyApi.APIClient | null>(null);
 
   const setApi = useCallback((token: string, host: string) => {
-    const newApi = createApi(token, host);
-    setApiInstance(newApi);
+    const cleanHost = removeProtocol(host);
+    initMisskeyClient(token, cleanHost);
+    setApiInstance(globalApi);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const token = await AsyncStorage.getItem('token');
+      const server = await AsyncStorage.getItem('server');
+      if (token && server) {
+        setApi(token, server);
+      }
+    })();
   }, []);
 
   useEffect(() => {

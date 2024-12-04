@@ -13,8 +13,8 @@ export default [
   {
     settings: {
       react: {
-        version: 'detect'
-      }
+        version: 'detect',
+      },
     },
     rules: {
       'no-undef': 'off',
