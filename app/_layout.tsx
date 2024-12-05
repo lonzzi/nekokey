@@ -1,7 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as NavigationBar from 'expo-navigation-bar';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -19,6 +19,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 
 import '../i18n/config';
+
+import { JsStack } from '@/components/JsStack';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -86,8 +88,8 @@ export default function RootLayout() {
         <MisskeyApiProvider initialToken={authInfo.token} initialServer={authInfo.server}>
           <AuthProvider>
             <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <Stack>
-                <Stack.Screen
+              <JsStack>
+                <JsStack.Screen
                   name="auth"
                   options={{
                     headerShown: false,
@@ -95,9 +97,9 @@ export default function RootLayout() {
                     gestureEnabled: false,
                   }}
                 />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="+not-found" />
-              </Stack>
+                <JsStack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <JsStack.Screen name="+not-found" />
+              </JsStack>
               <StatusBar style="auto" backgroundColor="transparent" translucent={true} />
             </ThemeProvider>
           </AuthProvider>
