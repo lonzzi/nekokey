@@ -1,26 +1,21 @@
 import { Note } from '@/components/Note';
-import TabViewHeader from '@/components/TabViewHeader';
 import { ThemedView } from '@/components/ThemedView';
+import TabBar from '@/components/TopTabBar';
+import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
 import { useMisskeyApi } from '@/lib/contexts/MisskeyApiContext';
 import { useScroll } from '@/lib/contexts/ScrollContext';
-import { useHeaderHeight } from '@react-navigation/elements';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { useQuery } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
-import { useState } from 'react';
 import { ActivityIndicator, Animated, RefreshControl, StyleSheet } from 'react-native';
-import { SceneMap, TabView } from 'react-native-tab-view';
+
+const Tab = createMaterialTopTabNavigator();
 
 export default function HomeScreen() {
   const { api } = useMisskeyApi();
-  const headerHeight = useHeaderHeight();
   const { scrollY } = useScroll();
-  const [index, setIndex] = useState(0);
-
-  const [routes] = useState([
-    { key: 'home', title: '综合' },
-    { key: 'global', title: '全局' },
-    { key: 'local', title: '本地' },
-  ]);
+  const topTabBarHeight = useTopTabBarHeight();
+  const bottomTabHeight = useBottomTabBarHeight();
 
   const homeTimelineQuery = useQuery({
     queryKey: ['timeline', 'home'],
@@ -65,9 +60,8 @@ export default function HomeScreen() {
           <RefreshControl refreshing={query.isRefetching} onRefresh={query.refetch} />
         }
         style={styles.container}
-        contentInset={{ top: headerHeight }}
-        contentOffset={{ x: 0, y: -headerHeight }}
-        automaticallyAdjustContentInsets
+        contentInset={{ top: topTabBarHeight, bottom: bottomTabHeight }}
+        contentInsetAdjustmentBehavior="automatic"
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
           useNativeDriver: true,
         })}
@@ -76,38 +70,17 @@ export default function HomeScreen() {
     );
   };
 
-  const renderScene = SceneMap({
-    home: () => renderTimelineList(homeTimelineQuery),
-    global: () => renderTimelineList(globalTimelineQuery),
-    local: () => renderTimelineList(localTimelineQuery),
-  });
+  // 定义每个标签页的组件
+  const HomeTimeline = () => renderTimelineList(homeTimelineQuery);
+  const GlobalTimeline = () => renderTimelineList(globalTimelineQuery);
+  const LocalTimeline = () => renderTimelineList(localTimelineQuery);
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerTitle: '主页',
-          header: ({ options }) => {
-            const title = options.title ?? '主页';
-            return (
-              <TabViewHeader
-                headerProps={{ ...options, title }}
-                tabViewProps={{
-                  navigationState: { index, routes },
-                  onIndexChange: setIndex,
-                }}
-              />
-            );
-          },
-        }}
-      />
-      <TabView
-        navigationState={{ index, routes }}
-        renderScene={renderScene}
-        onIndexChange={setIndex}
-        renderTabBar={() => null}
-      />
-    </>
+    <Tab.Navigator tabBar={(props) => <TabBar {...props} headerTitle="综合" />}>
+      <Tab.Screen name="综合" component={HomeTimeline} />
+      <Tab.Screen name="全局" component={GlobalTimeline} />
+      <Tab.Screen name="本地" component={LocalTimeline} />
+    </Tab.Navigator>
   );
 }
 
