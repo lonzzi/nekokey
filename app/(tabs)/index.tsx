@@ -1,6 +1,7 @@
 import { Note } from '@/components/Note';
 import { ThemedView } from '@/components/ThemedView';
 import TabBar from '@/components/TopTabBar';
+import { Colors } from '@/constants/Colors';
 import useRefresh from '@/hooks/useRefresh';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
 import { useMisskeyApi } from '@/lib/contexts/MisskeyApiContext';
@@ -8,7 +9,13 @@ import { useScroll } from '@/lib/contexts/ScrollContext';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { useQuery } from '@tanstack/react-query';
-import { ActivityIndicator, Animated, RefreshControl, StyleSheet } from 'react-native';
+import {
+  ActivityIndicator,
+  Animated,
+  RefreshControl,
+  StyleSheet,
+  useColorScheme,
+} from 'react-native';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -17,6 +24,7 @@ export default function HomeScreen() {
   const { scrollY } = useScroll();
   const topTabBarHeight = useTopTabBarHeight();
   const bottomTabHeight = useBottomTabBarHeight();
+  const colorScheme = useColorScheme();
 
   const homeTimelineQuery = useQuery({
     queryKey: ['timeline', 'home'],
@@ -62,7 +70,12 @@ export default function HomeScreen() {
         contentInset={{ top: topTabBarHeight, bottom: bottomTabHeight }}
         contentOffset={{ x: 0, y: -topTabBarHeight }}
         scrollIndicatorInsets={{ top: topTabBarHeight, bottom: bottomTabHeight }}
-        style={styles.container}
+        style={[
+          styles.container,
+          {
+            backgroundColor: Colors[colorScheme ?? 'light'].background,
+          },
+        ]}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
           useNativeDriver: true,
         })}
@@ -76,7 +89,7 @@ export default function HomeScreen() {
   const LocalTimeline = () => renderTimelineList(localTimelineQuery);
 
   return (
-    <Tab.Navigator tabBar={(props) => <TabBar {...props} headerTitle="综合" />}>
+    <Tab.Navigator tabBar={(props) => <TabBar {...props} headerTitle="时间线" />}>
       <Tab.Screen name="综合" component={HomeTimeline} />
       <Tab.Screen name="全局" component={GlobalTimeline} />
       <Tab.Screen name="本地" component={LocalTimeline} />

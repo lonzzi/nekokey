@@ -1,3 +1,4 @@
+import { BlueViewIntensity } from '@/constants/Colors';
 import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { useLinkBuilder, useTheme } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
@@ -6,20 +7,28 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTopTabBarHeight } from '../hooks/useTopTabBarHeight';
 
+const TAB_WIDTH = 60;
+
 type TabBarProps = MaterialTopTabBarProps & {
   headerTitle?: string;
 };
 
 function TabBar({ state, descriptors, navigation, position, headerTitle }: TabBarProps) {
-  const { colors } = useTheme();
+  const { colors, dark } = useTheme();
   const insets = useSafeAreaInsets();
   const topTabBarHeight = useTopTabBarHeight();
   const { buildHref } = useLinkBuilder();
 
+  const inputRange = state.routes.map((_, i) => i);
+  const translateX = position.interpolate({
+    inputRange,
+    outputRange: inputRange.map((i) => i * TAB_WIDTH),
+  });
+
   return (
     <BlurView
-      intensity={80}
-      tint="light"
+      intensity={BlueViewIntensity}
+      tint={dark ? 'dark' : 'light'}
       style={[
         Platform.OS === 'ios' ? styles.blurView : {},
         {
@@ -65,45 +74,44 @@ function TabBar({ state, descriptors, navigation, position, headerTitle }: TabBa
             });
           };
 
-          const inputRange = state.routes.map((_, i) => i);
-          const opacity = position.interpolate({
-            inputRange,
-            outputRange: inputRange.map((i) => (i === index ? 1 : 0.6)),
-          });
-
           return (
-            <TouchableOpacity
-              key={route.key}
-              {...(Platform.OS === 'web' ? { href: buildHref(route.name, route.params) } : {})}
-              accessibilityRole={Platform.OS === 'web' ? 'link' : 'button'}
-              accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={options.tabBarAccessibilityLabel}
-              testID={options.tabBarButtonTestID}
-              onPress={onPress}
-              onLongPress={onLongPress}
-              style={[
-                styles.tabButton,
-                { backgroundColor: isFocused ? 'rgba(0,0,0,0.05)' : 'transparent' },
-              ]}
-            >
-              <Animated.Text
-                style={[
-                  styles.tabText,
-                  {
-                    opacity,
-                    color: colors.text,
-                    fontWeight: isFocused ? '600' : '400',
-                  },
-                ]}
+            <View key={route.key}>
+              <TouchableOpacity
+                {...(Platform.OS === 'web' ? { href: buildHref(route.name, route.params) } : {})}
+                accessibilityRole={Platform.OS === 'web' ? 'link' : 'button'}
+                accessibilityState={isFocused ? { selected: true } : {}}
+                accessibilityLabel={options.tabBarAccessibilityLabel}
+                testID={options.tabBarButtonTestID}
+                onPress={onPress}
+                onLongPress={onLongPress}
+                style={styles.tabButton}
               >
-                {typeof label === 'function'
-                  ? label({ focused: isFocused, color: colors.text, children: '' })
-                  : label}
-              </Animated.Text>
-            </TouchableOpacity>
+                <Animated.Text
+                  style={[
+                    styles.tabText,
+                    {
+                      opacity: position.interpolate({
+                        inputRange,
+                        outputRange: inputRange.map((i) => (i === index ? 1 : 0.3)),
+                      }),
+                      color: colors.text,
+                      fontWeight: isFocused ? '600' : '400',
+                    },
+                  ]}
+                >
+                  {typeof label === 'function'
+                    ? label({ focused: isFocused, color: colors.text, children: '' })
+                    : label}
+                </Animated.Text>
+              </TouchableOpacity>
+            </View>
           );
         })}
       </View>
+
+      <Animated.View style={[styles.containerIndicator, { transform: [{ translateX }] }]}>
+        <View style={{ backgroundColor: colors.primary, height: 2, width: '60%' }} />
+      </Animated.View>
     </BlurView>
   );
 }
@@ -143,16 +151,24 @@ const styles = StyleSheet.create({
   },
 
   tabButton: {
-    flex: 1,
-    height: 36,
-    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 4,
+    position: 'relative',
+    paddingBottom: 6,
+    width: TAB_WIDTH,
   },
 
   tabText: {
     fontSize: 15,
+  },
+
+  containerIndicator: {
+    height: 2,
+    position: 'absolute',
+    bottom: 0,
+    left: 16,
+    width: TAB_WIDTH,
+    alignItems: 'center',
   },
 });
 
