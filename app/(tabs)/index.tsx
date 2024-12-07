@@ -1,6 +1,7 @@
 import { Note } from '@/components/Note';
 import { ThemedView } from '@/components/ThemedView';
 import TabBar from '@/components/TopTabBar';
+import useRefresh from '@/hooks/useRefresh';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
 import { useMisskeyApi } from '@/lib/contexts/MisskeyApiContext';
 import { useScroll } from '@/lib/contexts/ScrollContext';
@@ -41,8 +42,9 @@ export default function HomeScreen() {
     },
   });
 
-  // 定义每个标签页的渲染函数
   const renderTimelineList = (query: typeof homeTimelineQuery) => {
+    const { refreshing, onRefresh } = useRefresh(query);
+
     if (query.isLoading) {
       return (
         <ThemedView style={styles.loadingContainer}>
@@ -56,12 +58,11 @@ export default function HomeScreen() {
         data={query.data}
         renderItem={({ item }) => <Note note={item} />}
         keyExtractor={(item) => item.id}
-        refreshControl={
-          <RefreshControl refreshing={query.isRefetching} onRefresh={query.refetch} />
-        }
-        style={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentInset={{ top: topTabBarHeight, bottom: bottomTabHeight }}
-        contentInsetAdjustmentBehavior="automatic"
+        contentOffset={{ x: 0, y: -topTabBarHeight }}
+        scrollIndicatorInsets={{ top: topTabBarHeight, bottom: bottomTabHeight }}
+        style={styles.container}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
           useNativeDriver: true,
         })}
@@ -70,7 +71,6 @@ export default function HomeScreen() {
     );
   };
 
-  // 定义每个标签页的组件
   const HomeTimeline = () => renderTimelineList(homeTimelineQuery);
   const GlobalTimeline = () => renderTimelineList(globalTimelineQuery);
   const LocalTimeline = () => renderTimelineList(localTimelineQuery);

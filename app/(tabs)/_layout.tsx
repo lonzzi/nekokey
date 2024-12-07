@@ -23,13 +23,6 @@ function TabLayoutContent() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
-        headerStyle: {
-          backgroundColor: 'transparent',
-        },
-        headerTransparent: true,
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
         tabBarStyle: Platform.select({
           ios: {
             position: 'absolute',
@@ -37,13 +30,13 @@ function TabLayoutContent() {
           default: {},
         }),
         tabBarShowLabel: false,
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          headerShown: false,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
@@ -51,7 +44,6 @@ function TabLayoutContent() {
         name="explore"
         options={{
           title: 'Explore',
-          headerShown: false,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
       />

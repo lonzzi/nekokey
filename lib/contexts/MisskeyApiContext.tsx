@@ -7,7 +7,7 @@ const removeProtocol = (host: string): string => {
   return host.replace(/^(https?:\/\/)/, '');
 };
 
-interface MisskeyApiContextType {
+export interface MisskeyApiContextType {
   api: MisskeyApi.APIClient | null;
   setApi: (token: string, host: string) => void;
 }

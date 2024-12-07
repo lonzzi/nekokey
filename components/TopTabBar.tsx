@@ -21,7 +21,7 @@ function TabBar({ state, descriptors, navigation, position, headerTitle }: TabBa
       intensity={80}
       tint="light"
       style={[
-        styles.blurView,
+        Platform.OS === 'ios' ? styles.blurView : {},
         {
           paddingTop: insets.top,
           height: topTabBarHeight,
