@@ -21,7 +21,7 @@ const Tab = createMaterialTopTabNavigator();
 
 export default function HomeScreen() {
   const { api } = useMisskeyApi();
-  const { scrollY } = useScroll();
+  const { scrollY, isDragging } = useScroll();
   const topTabBarHeight = useTopTabBarHeight();
   const bottomTabHeight = useBottomTabBarHeight();
   const colorScheme = useColorScheme();
@@ -78,7 +78,13 @@ export default function HomeScreen() {
         ]}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
           useNativeDriver: true,
+          listener: () => {
+            isDragging.setValue(1);
+          },
         })}
+        onScrollEndDrag={() => {
+          isDragging.setValue(0);
+        }}
         scrollEventThrottle={16}
       />
     );
