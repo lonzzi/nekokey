@@ -1,61 +1,54 @@
-import { createContext, useCallback, useContext, useEffect, useRef } from 'react';
-import { Animated } from 'react-native';
+import { createContext, useContext } from 'react';
+import { SharedValue, useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
 
 type ScrollContextType = {
-  scrollY: Animated.Value;
+  scrollY: SharedValue<number>;
   /**
    * 0: 停止
    * 1: 向上
    * 2: 向下
    */
-  directionValue: Animated.Value;
-  isDragging: Animated.Value;
+  directionValue: SharedValue<number>;
+  isDragging: SharedValue<boolean>;
+  dragStartY: SharedValue<number>;
+  dragEndY: SharedValue<number>;
 };
 
 export const ScrollContext = createContext<ScrollContextType>({
-  scrollY: new Animated.Value(0),
-  directionValue: new Animated.Value(0),
-  isDragging: new Animated.Value(0),
+  scrollY: { value: 0 } as SharedValue<number>,
+  directionValue: { value: 0 } as SharedValue<number>,
+  isDragging: { value: false } as SharedValue<boolean>,
+  dragStartY: { value: 0 } as SharedValue<number>,
+  dragEndY: { value: 0 } as SharedValue<number>,
 });
 
 export function ScrollProvider({ children }: { children: React.ReactNode }) {
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const directionValue = useRef(new Animated.Value(0)).current;
-  const isDragging = useRef(new Animated.Value(0)).current;
-  const scrollEndTimer = useRef<NodeJS.Timeout>();
-  const lastScrollY = useRef(0);
-  const SCROLL_THRESHOLD = 1;
-  const lastDirection = useRef<'up' | 'down' | null>(null);
+  const scrollY = useSharedValue(0);
+  const directionValue = useSharedValue(0);
+  const isDragging = useSharedValue(false);
+  const lastScrollY = useSharedValue(0);
+  const dragStartY = useSharedValue(0);
+  const dragEndY = useSharedValue(0);
 
-  const handleScroll = useCallback((value: number) => {
-    const scrollDiff = value - lastScrollY.current;
-
-    if (Math.abs(scrollDiff) > SCROLL_THRESHOLD) {
-      const direction = scrollDiff > 0 ? 'down' : 'up';
-
-      lastDirection.current = direction;
-      directionValue.setValue(direction === 'up' ? 1 : 2);
-      lastScrollY.current = value;
+  const updateScrollDirection = (currentY: number) => {
+    'worklet';
+    if (currentY > lastScrollY.value) {
+      directionValue.value = 2; // 向下滚动
+    } else if (currentY < lastScrollY.value) {
+      directionValue.value = 1; // 向上滚动
     }
+    lastScrollY.value = currentY;
+  };
 
-    if (scrollEndTimer.current) {
-      clearTimeout(scrollEndTimer.current);
-    }
-  }, []);
-
-  useEffect(() => {
-    const scrollListener = scrollY.addListener(({ value }) => handleScroll(value));
-
-    return () => {
-      scrollY.removeListener(scrollListener);
-      if (scrollEndTimer.current) {
-        clearTimeout(scrollEndTimer.current);
-      }
-    };
-  }, [scrollY, handleScroll]);
+  useAnimatedReaction(
+    () => scrollY.value,
+    (currentY) => {
+      updateScrollDirection(currentY);
+    },
+  );
 
   return (
-    <ScrollContext.Provider value={{ scrollY, directionValue, isDragging }}>
+    <ScrollContext.Provider value={{ scrollY, directionValue, isDragging, dragStartY, dragEndY }}>
       {children}
     </ScrollContext.Provider>
   );

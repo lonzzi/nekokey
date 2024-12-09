@@ -4,8 +4,13 @@ import { useScroll } from '@/lib/contexts/ScrollContext';
 import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { useLinkBuilder, useTheme } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Platform, Animated as RNAnimated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TAB_WIDTH = 60;
@@ -19,10 +24,8 @@ function TabBar({ state, descriptors, navigation, position, headerTitle }: TabBa
   const insets = useSafeAreaInsets();
   const topTabBarHeight = useTopTabBarHeight();
   const { buildHref } = useLinkBuilder();
-  const { scrollY, isDragging, directionValue } = useScroll();
-  const headerTranslateY = useRef(new Animated.Value(0)).current;
-
-  const [currentDirection, setCurrentDirection] = useState(0);
+  const { scrollY, isDragging, dragStartY, dragEndY, directionValue } = useScroll();
+  const lastTranslateY = useSharedValue(0);
 
   const inputRange = state.routes.map((_, i) => i);
   const translateX = position.interpolate({
@@ -30,56 +33,49 @@ function TabBar({ state, descriptors, navigation, position, headerTitle }: TabBa
     outputRange: inputRange.map((i) => i * TAB_WIDTH),
   });
 
-  const clampedScrollY = Animated.diffClamp(
-    scrollY.interpolate({
-      inputRange: [-1, 0, 1],
-      outputRange: [0, 0, 1],
-      extrapolateLeft: 'clamp',
-    }),
-    0,
-    topTabBarHeight,
-  );
+  const animatedStyle = useAnimatedStyle(() => {
+    const isAtTop = scrollY.value <= 0;
 
-  useEffect(() => {
-    isDragging.addListener(({ value }) => {
-      if (value === 0) {
-        Animated.timing(headerTranslateY, {
-          toValue: currentDirection === 1 ? 0 : -topTabBarHeight,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
+    if (isAtTop) {
+      return { transform: [{ translateY: 0 }] };
+    }
+
+    const dragDistance = dragEndY.value - dragStartY.value;
+    const initialOffset = -scrollY.value;
+
+    const currentTranslateY = isDragging.value
+      ? Math.max(
+          -topTabBarHeight,
+          Math.min(0, directionValue.value === 2 ? dragDistance : initialOffset + dragDistance),
+        )
+      : Math.max(-topTabBarHeight, Math.min(0, -scrollY.value));
+
+    console.log('dragDistance', dragDistance, currentTranslateY, lastTranslateY.value);
+
+    if (isDragging.value) {
+      if (directionValue.value === 2 && lastTranslateY.value === -topTabBarHeight) {
+        return {
+          transform: [{ translateY: -topTabBarHeight }],
+        };
       }
+
+      lastTranslateY.value = currentTranslateY;
+      return {
+        transform: [{ translateY: currentTranslateY }],
+      };
+    }
+
+    const targetTranslateY = directionValue.value === 2 ? -topTabBarHeight : 0;
+    const translateY = withTiming(targetTranslateY, {
+      duration: 250,
+      easing: Easing.bezier(0.4, 0, 0.2, 1),
     });
 
-    return () => {
-      isDragging.removeAllListeners();
+    lastTranslateY.value = targetTranslateY;
+    return {
+      transform: [{ translateY }],
     };
-  }, [currentDirection]);
-
-  useEffect(() => {
-    const directionListener = directionValue.addListener(({ value }) => {
-      setCurrentDirection(value);
-    });
-
-    return () => {
-      directionValue.removeListener(directionListener);
-    };
-  }, []);
-
-  const animatedStyle = {
-    transform: [
-      {
-        translateY: Animated.add(
-          headerTranslateY,
-          clampedScrollY.interpolate({
-            inputRange: [0, topTabBarHeight],
-            outputRange: [0, -topTabBarHeight],
-            extrapolate: 'clamp',
-          }),
-        ),
-      },
-    ],
-  };
+  });
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
@@ -143,7 +139,7 @@ function TabBar({ state, descriptors, navigation, position, headerTitle }: TabBa
                   onLongPress={onLongPress}
                   style={styles.tabButton}
                 >
-                  <Animated.Text
+                  <RNAnimated.Text
                     style={[
                       styles.tabText,
                       {
@@ -159,16 +155,16 @@ function TabBar({ state, descriptors, navigation, position, headerTitle }: TabBa
                     {typeof label === 'function'
                       ? label({ focused: isFocused, color: colors.text, children: '' })
                       : label}
-                  </Animated.Text>
+                  </RNAnimated.Text>
                 </TouchableOpacity>
               </View>
             );
           })}
         </View>
 
-        <Animated.View style={[styles.containerIndicator, { transform: [{ translateX }] }]}>
+        <RNAnimated.View style={[styles.containerIndicator, { transform: [{ translateX }] }]}>
           <View style={{ backgroundColor: colors.primary, height: 2, width: '60%' }} />
-        </Animated.View>
+        </RNAnimated.View>
       </BlurView>
     </Animated.View>
   );

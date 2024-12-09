@@ -9,19 +9,14 @@ import { useScroll } from '@/lib/contexts/ScrollContext';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { useQuery } from '@tanstack/react-query';
-import {
-  ActivityIndicator,
-  Animated,
-  RefreshControl,
-  StyleSheet,
-  useColorScheme,
-} from 'react-native';
+import { ActivityIndicator, RefreshControl, StyleSheet, useColorScheme } from 'react-native';
+import Animated, { useAnimatedScrollHandler } from 'react-native-reanimated';
 
 const Tab = createMaterialTopTabNavigator();
 
 export default function HomeScreen() {
   const { api } = useMisskeyApi();
-  const { scrollY, isDragging } = useScroll();
+  const { scrollY, isDragging, dragStartY, dragEndY } = useScroll();
   const topTabBarHeight = useTopTabBarHeight();
   const bottomTabHeight = useBottomTabBarHeight();
   const colorScheme = useColorScheme();
@@ -53,6 +48,18 @@ export default function HomeScreen() {
   const renderTimelineList = (query: typeof homeTimelineQuery) => {
     const { refreshing, onRefresh } = useRefresh(query);
 
+    const scrollHandler = useAnimatedScrollHandler({
+      onScroll: ({ contentOffset: { y } }) => {
+        scrollY.value = y;
+        isDragging.value = true;
+        dragStartY.value = y;
+      },
+      onEndDrag: () => {
+        isDragging.value = false;
+        dragEndY.value = scrollY.value;
+      },
+    });
+
     if (query.isLoading) {
       return (
         <ThemedView style={styles.loadingContainer}>
@@ -76,15 +83,7 @@ export default function HomeScreen() {
             backgroundColor: Colors[colorScheme ?? 'light'].background,
           },
         ]}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-          useNativeDriver: true,
-          listener: () => {
-            isDragging.setValue(1);
-          },
-        })}
-        onScrollEndDrag={() => {
-          isDragging.setValue(0);
-        }}
+        onScroll={scrollHandler}
         scrollEventThrottle={16}
       />
     );
