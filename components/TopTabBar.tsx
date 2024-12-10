@@ -50,12 +50,16 @@ function TabBar({ state, descriptors, navigation, position, headerTitle }: TabBa
         )
       : Math.max(-topTabBarHeight, Math.min(0, -scrollY.value));
 
-    console.log('dragDistance', dragDistance, currentTranslateY, lastTranslateY.value);
-
     if (isDragging.value) {
       if (directionValue.value === 2 && lastTranslateY.value === -topTabBarHeight) {
         return {
           transform: [{ translateY: -topTabBarHeight }],
+        };
+      }
+
+      if (directionValue.value === 1 && lastTranslateY.value === 0) {
+        return {
+          transform: [{ translateY: 0 }],
         };
       }
 

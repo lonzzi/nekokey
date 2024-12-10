@@ -29,12 +29,18 @@ export function ScrollProvider({ children }: { children: React.ReactNode }) {
   const lastScrollY = useSharedValue(0);
   const dragStartY = useSharedValue(0);
   const dragEndY = useSharedValue(0);
+  const SCROLL_THRESHOLD = 10; // 滚动阈值（单位：像素）
 
   const updateScrollDirection = (currentY: number) => {
     'worklet';
-    if (currentY > lastScrollY.value) {
+    const diff = currentY - lastScrollY.value;
+    if (Math.abs(diff) < SCROLL_THRESHOLD) {
+      return;
+    }
+
+    if (diff > 0) {
       directionValue.value = 2; // 向下滚动
-    } else if (currentY < lastScrollY.value) {
+    } else {
       directionValue.value = 1; // 向上滚动
     }
     lastScrollY.value = currentY;
