@@ -1,11 +1,12 @@
 import { Note } from '@/components/Note';
 import { ThemedView } from '@/components/ThemedView';
-import TabBar from '@/components/TopTabBar';
+import TopTabBar from '@/components/TopTabBar';
 import { Colors } from '@/constants/Colors';
 import useRefresh from '@/hooks/useRefresh';
+import { useTopTabBar } from '@/hooks/useTopTabBar';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
 import { useMisskeyApi } from '@/lib/contexts/MisskeyApiContext';
-import { useScroll } from '@/lib/contexts/ScrollContext';
+import { useScrollHandlers } from '@/lib/contexts/ScrollContext';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { useQuery } from '@tanstack/react-query';
@@ -16,10 +17,11 @@ const Tab = createMaterialTopTabNavigator();
 
 export default function HomeScreen() {
   const { api } = useMisskeyApi();
-  const { scrollY, isDragging, dragStartY, dragEndY } = useScroll();
   const topTabBarHeight = useTopTabBarHeight();
   const bottomTabHeight = useBottomTabBarHeight();
   const colorScheme = useColorScheme();
+  const { showTabBar } = useTopTabBar();
+  const { onBeginDrag, onScroll, onEndDrag, onMomentumEnd } = useScrollHandlers();
 
   const homeTimelineQuery = useQuery({
     queryKey: ['timeline', 'home'],
@@ -45,20 +47,15 @@ export default function HomeScreen() {
     },
   });
 
+  const scrollHandler = useAnimatedScrollHandler({
+    onBeginDrag: onBeginDrag,
+    onScroll: onScroll,
+    onEndDrag: onEndDrag,
+    onMomentumEnd: onMomentumEnd,
+  });
+
   const renderTimelineList = (query: typeof homeTimelineQuery) => {
     const { refreshing, onRefresh } = useRefresh(query);
-
-    const scrollHandler = useAnimatedScrollHandler({
-      onScroll: ({ contentOffset: { y } }) => {
-        scrollY.value = y;
-        isDragging.value = true;
-        dragStartY.value = y;
-      },
-      onEndDrag: () => {
-        isDragging.value = false;
-        dragEndY.value = scrollY.value;
-      },
-    });
 
     if (query.isLoading) {
       return (
@@ -94,7 +91,14 @@ export default function HomeScreen() {
   const LocalTimeline = () => renderTimelineList(localTimelineQuery);
 
   return (
-    <Tab.Navigator tabBar={(props) => <TabBar {...props} headerTitle="时间线" />}>
+    <Tab.Navigator
+      tabBar={(props) => <TopTabBar {...props} headerTitle="时间线" />}
+      screenListeners={{
+        swipeStart: () => {
+          showTabBar();
+        },
+      }}
+    >
       <Tab.Screen name="综合" component={HomeTimeline} />
       <Tab.Screen name="全局" component={GlobalTimeline} />
       <Tab.Screen name="本地" component={LocalTimeline} />

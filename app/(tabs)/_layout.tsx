@@ -5,11 +5,10 @@ import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { ScrollProvider } from '@/lib/contexts/ScrollContext';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 
-function TabLayoutContent() {
+export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { loaded } = useAuth();
 
@@ -48,13 +47,5 @@ function TabLayoutContent() {
         }}
       />
     </Tabs>
-  );
-}
-
-export default function TabLayout() {
-  return (
-    <ScrollProvider>
-      <TabLayoutContent />
-    </ScrollProvider>
   );
 }

@@ -1,31 +1,25 @@
 import { BlueViewIntensity } from '@/constants/Colors';
+import { useHeaderTransform } from '@/hooks/useHeaderTransform';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
-import { useScroll } from '@/lib/contexts/ScrollContext';
 import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { useLinkBuilder, useTheme } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { Platform, Animated as RNAnimated, StyleSheet, TouchableOpacity, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TAB_WIDTH = 60;
 
 type TabBarProps = MaterialTopTabBarProps & {
-  headerTitle?: string;
+  headerTitle?: React.ReactNode;
 };
 
-function TabBar({ state, descriptors, navigation, position, headerTitle }: TabBarProps) {
+function TopTabBar({ state, descriptors, navigation, position, headerTitle }: TabBarProps) {
   const { colors, dark } = useTheme();
   const insets = useSafeAreaInsets();
   const topTabBarHeight = useTopTabBarHeight();
   const { buildHref } = useLinkBuilder();
-  const { scrollY, isDragging, dragStartY, dragEndY, directionValue } = useScroll();
-  const lastTranslateY = useSharedValue(0);
+  const headerTransform = useHeaderTransform();
 
   const inputRange = state.routes.map((_, i) => i);
   const translateX = position.interpolate({
@@ -33,56 +27,8 @@ function TabBar({ state, descriptors, navigation, position, headerTitle }: TabBa
     outputRange: inputRange.map((i) => i * TAB_WIDTH),
   });
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const isAtTop = scrollY.value <= 0;
-
-    if (isAtTop) {
-      return { transform: [{ translateY: 0 }] };
-    }
-
-    const dragDistance = dragEndY.value - dragStartY.value;
-    const initialOffset = -scrollY.value;
-
-    const currentTranslateY = isDragging.value
-      ? Math.max(
-          -topTabBarHeight,
-          Math.min(0, directionValue.value === 2 ? dragDistance : initialOffset + dragDistance),
-        )
-      : Math.max(-topTabBarHeight, Math.min(0, -scrollY.value));
-
-    if (isDragging.value) {
-      if (directionValue.value === 2 && lastTranslateY.value === -topTabBarHeight) {
-        return {
-          transform: [{ translateY: -topTabBarHeight }],
-        };
-      }
-
-      if (directionValue.value === 1 && lastTranslateY.value === 0) {
-        return {
-          transform: [{ translateY: 0 }],
-        };
-      }
-
-      lastTranslateY.value = currentTranslateY;
-      return {
-        transform: [{ translateY: currentTranslateY }],
-      };
-    }
-
-    const targetTranslateY = directionValue.value === 2 ? -topTabBarHeight : 0;
-    const translateY = withTiming(targetTranslateY, {
-      duration: 250,
-      easing: Easing.bezier(0.4, 0, 0.2, 1),
-    });
-
-    lastTranslateY.value = targetTranslateY;
-    return {
-      transform: [{ translateY }],
-    };
-  });
-
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <Animated.View style={[styles.container, headerTransform]}>
       <BlurView
         intensity={BlueViewIntensity}
         tint={dark ? 'dark' : 'light'}
@@ -238,4 +184,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TabBar;
+export default TopTabBar;

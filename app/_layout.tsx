@@ -20,6 +20,9 @@ import { Platform } from 'react-native';
 
 import '../i18n/config';
 
+import { MainScrollProvider } from '@/components/MainScrollProvider';
+import { ShellModeProvider } from '@/lib/contexts/ShellMode';
+
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
@@ -85,21 +88,25 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <MisskeyApiProvider initialToken={authInfo.token} initialServer={authInfo.server}>
           <AuthProvider>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <Stack>
-                <Stack.Screen
-                  name="auth"
-                  options={{
-                    headerShown: false,
-                    // 防止用户通过返回按钮回到登录页
-                    gestureEnabled: false,
-                  }}
-                />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="+not-found" />
-              </Stack>
-              <StatusBar style="auto" backgroundColor="transparent" translucent={true} />
-            </ThemeProvider>
+            <ShellModeProvider>
+              <MainScrollProvider>
+                <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                  <Stack>
+                    <Stack.Screen
+                      name="auth"
+                      options={{
+                        headerShown: false,
+                        // 防止用户通过返回按钮回到登录页
+                        gestureEnabled: false,
+                      }}
+                    />
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="+not-found" />
+                  </Stack>
+                  <StatusBar style="auto" backgroundColor="transparent" translucent={true} />
+                </ThemeProvider>
+              </MainScrollProvider>
+            </ShellModeProvider>
           </AuthProvider>
         </MisskeyApiProvider>
       </QueryClientProvider>
