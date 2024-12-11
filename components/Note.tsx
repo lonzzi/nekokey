@@ -5,7 +5,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Image, Modal, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
+import ImageViewer from 'react-native-image-zoom-viewer';
 
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
@@ -20,6 +21,7 @@ export function Note({ note, onReply }: NoteProps) {
   const [likeCount, setLikeCount] = useState(note.reactions?.['👍'] || 0);
   const { api } = useMisskeyApi();
   const queryClient = useQueryClient();
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
 
   const likeMutation = useMutation({
     mutationFn: async () => {
@@ -68,6 +70,88 @@ export function Note({ note, onReply }: NoteProps) {
     renoteMutation.mutate();
   };
 
+  const handleImagePress = (index: number) => {
+    setSelectedImageIndex(index);
+  };
+
+  const renderRenote = () => {
+    if (!note.renote) return null;
+    return (
+      <ThemedView style={styles.renoteContainer}>
+        <ThemedText style={styles.renoteHeader}>转发自 @{note.renote.user.username}</ThemedText>
+        <ThemedText>{note.renote.text}</ThemedText>
+      </ThemedView>
+    );
+  };
+
+  const renderImages = () => {
+    if (!note.files?.length) return null;
+
+    const imageCount = note.files.length;
+
+    // 根据图片数量决定布局样式
+    const getImageStyle = (index: number) => {
+      switch (imageCount) {
+        case 1:
+          return styles.singleImage;
+        case 2:
+          return styles.doubleImage;
+        case 3:
+          return index === 0 ? styles.tripleMainImage : styles.tripleSecondaryImage;
+        case 4:
+          return styles.quadImage;
+        default:
+          return styles.quadImage;
+      }
+    };
+
+    return (
+      <View
+        style={[
+          styles.imageContainer,
+          imageCount === 1 && styles.singleImageContainer,
+          imageCount === 2 && styles.doubleImageContainer,
+          imageCount >= 3 && styles.multiImageContainer,
+        ]}
+      >
+        {note.files.slice(0, 4).map((file, index) => (
+          <TouchableOpacity
+            key={file.id}
+            onPress={() => handleImagePress(index)}
+            style={getImageStyle(index)}
+          >
+            <Image
+              source={{ uri: file.url }}
+              style={StyleSheet.absoluteFill}
+              resizeMode={imageCount === 1 ? 'contain' : 'cover'}
+            />
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
+
+  const renderImageViewer = () => {
+    if (selectedImageIndex === -1) return null;
+
+    const images =
+      note.files?.map((file) => ({
+        url: file.url,
+      })) || [];
+
+    return (
+      <Modal visible={selectedImageIndex !== -1} transparent={true}>
+        <ImageViewer
+          imageUrls={images}
+          index={selectedImageIndex}
+          onCancel={() => setSelectedImageIndex(-1)}
+          enableSwipeDown
+          onSwipeDown={() => setSelectedImageIndex(-1)}
+        />
+      </Modal>
+    );
+  };
+
   return (
     <ThemedView style={styles.container}>
       <Image source={{ uri: note.user.avatarUrl || '' }} style={styles.avatar} />
@@ -81,6 +165,9 @@ export function Note({ note, onReply }: NoteProps) {
         </View>
 
         <ThemedText style={styles.text}>{note.text}</ThemedText>
+        {renderImages()}
+        {renderRenote()}
+        {renderImageViewer()}
 
         <View style={styles.actions}>
           <Pressable style={styles.actionButton} onPress={onReply}>
@@ -155,5 +242,61 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     color: '#666',
     fontSize: 14,
+  },
+  renoteContainer: {
+    padding: 8,
+    marginVertical: 8,
+    borderLeftWidth: 2,
+    borderLeftColor: '#666',
+  },
+  renoteHeader: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  imageContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 2,
+    marginVertical: 8,
+  },
+  singleImageContainer: {
+    height: 280,
+  },
+  singleImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  doubleImageContainer: {
+    height: 200,
+  },
+  doubleImage: {
+    width: '49.5%',
+    height: '100%',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  multiImageContainer: {
+    height: 200,
+  },
+  tripleMainImage: {
+    width: '49.5%',
+    height: '100%',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  tripleSecondaryImage: {
+    width: '49.5%',
+    height: '49.5%',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  quadImage: {
+    width: '49.5%',
+    height: '49.5%',
+    borderRadius: 8,
+    overflow: 'hidden',
   },
 });

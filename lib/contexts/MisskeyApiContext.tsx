@@ -1,6 +1,7 @@
 import { misskeyClient as globalApi, initMisskeyClient } from '@/lib/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api as MisskeyApi } from 'misskey-js';
+import * as Misskey from 'misskey-js';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 const removeProtocol = (host: string): string => {
@@ -10,6 +11,7 @@ const removeProtocol = (host: string): string => {
 export interface MisskeyApiContextType {
   api: MisskeyApi.APIClient | null;
   setApi: (token: string, host: string) => void;
+  stream: Misskey.Stream | null;
 }
 
 const MisskeyApiContext = createContext<MisskeyApiContextType | undefined>(undefined);
@@ -24,11 +26,14 @@ export function MisskeyApiProvider({
   initialServer: string;
 }) {
   const [api, setApiInstance] = useState<MisskeyApi.APIClient | null>(null);
+  const [stream, setStreamInstance] = useState<Misskey.Stream | null>(null);
 
   const setApi = useCallback((token: string, host: string) => {
     const cleanHost = removeProtocol(host);
     initMisskeyClient(token, cleanHost);
     setApiInstance(globalApi);
+    const tempStream = new Misskey.Stream(`wss://${cleanHost}`, { token });
+    setStreamInstance(tempStream);
   }, []);
 
   useEffect(() => {
@@ -48,7 +53,9 @@ export function MisskeyApiProvider({
   }, [initialToken, initialServer]);
 
   return (
-    <MisskeyApiContext.Provider value={{ api, setApi }}>{children}</MisskeyApiContext.Provider>
+    <MisskeyApiContext.Provider value={{ api, setApi, stream }}>
+      {children}
+    </MisskeyApiContext.Provider>
   );
 }
 

@@ -3,6 +3,7 @@ import { useHeaderTransform } from '@/hooks/useHeaderTransform';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
 import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { useLinkBuilder, useTheme } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { BlurView } from 'expo-blur';
 import { Platform, Animated as RNAnimated, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -15,6 +16,7 @@ type TabBarProps = MaterialTopTabBarProps & {
 };
 
 function TopTabBar({ state, descriptors, navigation, position, headerTitle }: TabBarProps) {
+  const queryClient = useQueryClient();
   const { colors, dark } = useTheme();
   const insets = useSafeAreaInsets();
   const topTabBarHeight = useTopTabBarHeight();
@@ -41,6 +43,17 @@ function TopTabBar({ state, descriptors, navigation, position, headerTitle }: Ta
         ]}
       >
         <View style={styles.headerContainer}>
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={() => {
+              queryClient.clear();
+            }}
+          >
+            <Animated.Text style={[styles.clearButtonText, { color: colors.primary }]}>
+              清除缓存
+            </Animated.Text>
+          </TouchableOpacity>
+
           <Animated.Text style={[styles.headerText, { color: colors.text }]}>
             {headerTitle}
           </Animated.Text>
@@ -181,6 +194,16 @@ const styles = StyleSheet.create({
     left: 16,
     width: TAB_WIDTH,
     alignItems: 'center',
+  },
+
+  clearButton: {
+    position: 'absolute',
+    right: 16,
+    zIndex: 1,
+  },
+
+  clearButtonText: {
+    fontSize: 14,
   },
 });
 
