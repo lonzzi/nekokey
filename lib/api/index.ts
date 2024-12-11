@@ -1,6 +1,12 @@
 import { api as MisskeyApi } from 'misskey-js';
+import * as Misskey from 'misskey-js';
 
-let misskeyClient: MisskeyApi.APIClient | null = null;
+const removeProtocol = (host: string): string => {
+  return host.replace(/^(https?:\/\/)/, '');
+};
+
+let misskeyApi: MisskeyApi.APIClient | null = null;
+let misskeyStream: Misskey.Stream | null = null;
 
 export const createMisskeyClient = (token: string, host: string): MisskeyApi.APIClient => {
   if (!token || !host) {
@@ -16,18 +22,29 @@ export const createMisskeyClient = (token: string, host: string): MisskeyApi.API
   });
 };
 
-export const initMisskeyClient = (token: string, host: string): MisskeyApi.APIClient => {
-  if (!misskeyClient) {
-    misskeyClient = createMisskeyClient(token, host);
+export const initMisskeyClient = (token: string, host: string) => {
+  const cleanHost = removeProtocol(host);
+
+  if (!misskeyApi) {
+    misskeyApi = createMisskeyClient(token, `https://${cleanHost}`);
   }
-  return misskeyClient;
+  if (!misskeyStream) {
+    misskeyStream = new Misskey.Stream(`wss://${cleanHost}`, { token });
+  }
 };
 
-export const getMisskeyClient = (): MisskeyApi.APIClient => {
-  if (!misskeyClient) {
-    throw new Error('API client is not initialized. Call initMisskeyClient first.');
+export const useMisskeyApi = (): MisskeyApi.APIClient => {
+  if (!misskeyApi) {
+    throw new Error('API client is not initialized.');
   }
-  return misskeyClient;
+  return misskeyApi;
 };
 
-export { misskeyClient };
+export const useMisskeyStream = (): Misskey.Stream => {
+  if (!misskeyStream) {
+    throw new Error('Stream is not initialized.');
+  }
+  return misskeyStream;
+};
+
+export { misskeyApi };

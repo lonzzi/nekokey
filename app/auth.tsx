@@ -1,4 +1,5 @@
-import { useMisskeyApi } from '@/lib/contexts/MisskeyApiContext';
+import { initMisskeyClient } from '@/lib/api';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
@@ -57,7 +58,7 @@ const requestPermission = [
 export default function AuthScreen() {
   const { t } = useTranslation();
   const [server, setServer] = useState('');
-  const { setApi } = useMisskeyApi();
+  const { setToken } = useAuth();
 
   const loginMutation = useMutation({
     mutationFn: async (processedServer: string) => {
@@ -90,7 +91,8 @@ export default function AuthScreen() {
     onSuccess: async (data) => {
       await AsyncStorage.setItem('server', data.server);
       await AsyncStorage.setItem('token', data.token);
-      setApi(data.token, data.server.replace(/^https?:\/\//, ''));
+      initMisskeyClient(data.token, data.server);
+      setToken(data.token);
       router.replace('/(tabs)');
     },
     onError: (error) => {

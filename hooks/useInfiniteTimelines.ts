@@ -1,4 +1,4 @@
-import { useMisskeyApi } from '@/lib/contexts/MisskeyApiContext';
+import { useMisskeyApi } from '@/lib/api';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Endpoints } from 'misskey-js';
 
@@ -12,7 +12,7 @@ type TimelineEndpoint = keyof Pick<
 >;
 
 export const useInfiniteTimelines = (endpoint: TimelineEndpoint) => {
-  const { api } = useMisskeyApi();
+  const api = useMisskeyApi();
 
   return useInfiniteQuery({
     queryKey: [endpoint],

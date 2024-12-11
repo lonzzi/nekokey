@@ -4,7 +4,7 @@ import type { User } from 'misskey-js/built/entities';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 
-import { useMisskeyApi } from './MisskeyApiContext';
+import { initMisskeyClient, misskeyApi } from '../api';
 
 interface AuthContextType {
   user: User | null;
@@ -18,24 +18,25 @@ interface AuthContextType {
   loaded: boolean;
   isAuthenticated: boolean;
   refresh: () => void;
+  setToken: (token: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { api } = useMisskeyApi();
   const [token, setToken] = useState<string | null>(null);
+  const [misskeyApiLoaded, setMisskeyApiLoaded] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['user', token],
     queryFn: async () => {
-      if (!api) {
+      if (!misskeyApi) {
         return null;
       }
 
       try {
-        return await api.request('i', {});
+        return await misskeyApi.request('i', {});
       } catch (error) {
         console.error('API request failed:', error);
         Alert.alert(
@@ -45,16 +46,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
     },
-    enabled: !!api,
+    enabled: !!misskeyApi,
   });
 
   useEffect(() => {
     const fetchToken = async () => {
       const token = await AsyncStorage.getItem('token');
+      const server = await AsyncStorage.getItem('server');
+      if (token && server) {
+        initMisskeyClient(token, server);
+        setMisskeyApiLoaded(true);
+      }
+      console.log(token);
       setToken(token);
     };
     fetchToken();
-  }, [api]);
+  }, [misskeyApiLoaded]);
 
   return (
     <AuthContext.Provider
@@ -66,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refresh: () => {
           queryClient.invalidateQueries({ queryKey: ['user', token] });
         },
+        setToken,
       }}
     >
       {children}

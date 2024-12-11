@@ -1,7 +1,7 @@
 import { useInfiniteTimelines } from '@/hooks/useInfiniteTimelines';
 import useRefresh from '@/hooks/useRefresh';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
-import { useMisskeyApi } from '@/lib/contexts/MisskeyApiContext';
+import { useMisskeyStream } from '@/lib/api';
 import { useScrollHandlers } from '@/lib/contexts/ScrollContext';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { UseInfiniteQueryResult, useQueryClient } from '@tanstack/react-query';
@@ -84,12 +84,10 @@ export const TimelineList = ({ query }: { query: UseInfiniteQueryResult<NoteType
 };
 
 export const HomeTimeline = () => {
-  const { stream } = useMisskeyApi();
+  const stream = useMisskeyStream();
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!stream) return;
-
     const homeChannel = stream.useChannel('homeTimeline');
     homeChannel.on('note', (note) => {
       console.log('homeChannel', note);

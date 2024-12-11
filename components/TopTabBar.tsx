@@ -1,6 +1,7 @@
 import { BlueViewIntensity } from '@/constants/Colors';
 import { useHeaderTransform } from '@/hooks/useHeaderTransform';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { useLinkBuilder, useTheme } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
@@ -51,6 +52,18 @@ function TopTabBar({ state, descriptors, navigation, position, headerTitle }: Ta
           >
             <Animated.Text style={[styles.clearButtonText, { color: colors.primary }]}>
               清除缓存
+            </Animated.Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={async () => {
+              await AsyncStorage.removeItem('token');
+              await AsyncStorage.removeItem('server');
+            }}
+          >
+            <Animated.Text style={[styles.logoutButtonText, { color: colors.primary }]}>
+              登出
             </Animated.Text>
           </TouchableOpacity>
 
@@ -203,6 +216,16 @@ const styles = StyleSheet.create({
   },
 
   clearButtonText: {
+    fontSize: 14,
+  },
+
+  logoutButton: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 1,
+  },
+
+  logoutButtonText: {
     fontSize: 14,
   },
 });

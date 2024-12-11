@@ -4,14 +4,12 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { AuthProvider } from '@/lib/contexts/AuthContext';
-import { MisskeyApiProvider } from '@/lib/contexts/MisskeyApiContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { persistQueryClient } from '@tanstack/query-persist-client-core';
@@ -21,6 +19,8 @@ import { Platform } from 'react-native';
 import '../i18n/config';
 
 import { MainScrollProvider } from '@/components/MainScrollProvider';
+import { initMisskeyClient } from '@/lib/api';
+import { AuthProvider } from '@/lib/contexts/AuthContext';
 import { ShellModeProvider } from '@/lib/contexts/ShellMode';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -52,7 +52,6 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
-  const [authInfo, setAuthInfo] = useState({ token: '', server: '' });
 
   useEffect(() => {
     if (loaded) {
@@ -62,7 +61,7 @@ export default function RootLayout() {
         const server = await AsyncStorage.getItem('server');
 
         if (token && server) {
-          setAuthInfo({ token, server });
+          initMisskeyClient(token, server);
         } else {
           router.push('/auth');
         }
@@ -86,29 +85,27 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <MisskeyApiProvider initialToken={authInfo.token} initialServer={authInfo.server}>
-          <AuthProvider>
-            <ShellModeProvider>
-              <MainScrollProvider>
-                <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                  <Stack>
-                    <Stack.Screen
-                      name="auth"
-                      options={{
-                        headerShown: false,
-                        // 防止用户通过返回按钮回到登录页
-                        gestureEnabled: false,
-                      }}
-                    />
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                    <Stack.Screen name="+not-found" />
-                  </Stack>
-                  <StatusBar style="auto" backgroundColor="transparent" translucent={true} />
-                </ThemeProvider>
-              </MainScrollProvider>
-            </ShellModeProvider>
-          </AuthProvider>
-        </MisskeyApiProvider>
+        <AuthProvider>
+          <ShellModeProvider>
+            <MainScrollProvider>
+              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                <Stack>
+                  <Stack.Screen
+                    name="auth"
+                    options={{
+                      headerShown: false,
+                      // 防止用户通过返回按钮回到登录页
+                      gestureEnabled: false,
+                    }}
+                  />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="+not-found" />
+                </Stack>
+                <StatusBar style="auto" backgroundColor="transparent" translucent={true} />
+              </ThemeProvider>
+            </MainScrollProvider>
+          </ShellModeProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

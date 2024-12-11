@@ -1,4 +1,4 @@
-import { useMisskeyApi } from '@/lib/contexts/MisskeyApiContext';
+import { useMisskeyApi } from '@/lib/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -19,7 +19,7 @@ interface NoteProps {
 export function Note({ note, onReply }: NoteProps) {
   const [isLiked, setIsLiked] = useState(!!note.myReaction);
   const [likeCount, setLikeCount] = useState(note.reactions?.['👍'] || 0);
-  const { api } = useMisskeyApi();
+  const api = useMisskeyApi();
   const queryClient = useQueryClient();
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
 
