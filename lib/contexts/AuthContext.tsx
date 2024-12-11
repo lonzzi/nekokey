@@ -57,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         initMisskeyClient(token, server);
         setMisskeyApiLoaded(true);
       }
-      console.log(token);
       setToken(token);
     };
     fetchToken();

@@ -2,7 +2,7 @@ import { useMisskeyApi } from '@/lib/api';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Endpoints } from 'misskey-js';
 
-type TimelineEndpoint = keyof Pick<
+export type TimelineEndpoint = keyof Pick<
   Endpoints,
   | 'notes/timeline'
   | 'notes/global-timeline'
