@@ -1,17 +1,19 @@
-import { BlueViewIntensity } from '@/constants/Colors';
+import { BlueViewIntensity, Colors } from '@/constants/Colors';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
-import { StyleSheet } from 'react-native';
+import { useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BlurTabBarBackground() {
+  const colorScheme = useColorScheme();
+
   return (
     <BlurView
       // System chrome material automatically adapts to the system's theme
       // and matches the native tab bar appearance on iOS.
-      tint="systemChromeMaterial"
+      // tint="systemChromeMaterial"
       intensity={BlueViewIntensity}
-      style={StyleSheet.absoluteFill}
+      style={Colors[colorScheme ?? 'light'].blurView}
     />
   );
 }

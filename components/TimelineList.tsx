@@ -160,7 +160,13 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
           data={query.data}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              progressViewOffset={Platform.OS === 'android' ? topTabBarHeight : 0}
+            />
+          }
           contentContainerStyle={{
             paddingTop: Platform.OS === 'ios' ? 0 : topTabBarHeight,
           }}

@@ -1,5 +1,6 @@
 import { GlobalTimeline, HomeTimeline, LocalTimeline } from '@/components/TimelineList';
 import TopTabBar from '@/components/TopTabBar';
+import TabBarBackground from '@/components/ui/TabBarBackground';
 import { useTopTabBar } from '@/hooks/useTopTabBar';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 
@@ -10,7 +11,9 @@ export default function HomeScreen() {
 
   return (
     <Tab.Navigator
-      tabBar={(props) => <TopTabBar {...props} headerTitle="时间线" />}
+      tabBar={(props) => (
+        <TopTabBar {...props} headerTitle="时间线" tabBarBackground={TabBarBackground} />
+      )}
       screenListeners={{
         swipeStart: () => {
           showTabBar();
