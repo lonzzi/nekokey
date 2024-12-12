@@ -26,10 +26,16 @@ export default function TabLayout() {
           ios: {
             position: 'absolute',
           },
+          android: {
+            height: 80,
+          },
           default: {},
         }),
         tabBarShowLabel: false,
         headerShown: false,
+        tabBarItemStyle: {
+          paddingVertical: 10,
+        },
       }}
     >
       <Tabs.Screen

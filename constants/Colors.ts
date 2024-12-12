@@ -25,4 +25,4 @@ export const Colors = {
   },
 };
 
-export const BlueViewIntensity = 80;
+export const BlueViewIntensity = 95;
