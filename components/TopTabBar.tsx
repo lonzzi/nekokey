@@ -1,4 +1,4 @@
-import { BlueViewIntensity } from '@/constants/Colors';
+import { BlueViewIntensity, Colors } from '@/constants/Colors';
 import { useHeaderTransform } from '@/hooks/useHeaderTransform';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -6,7 +6,14 @@ import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { useLinkBuilder, useTheme } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { BlurView } from 'expo-blur';
-import { Platform, Animated as RNAnimated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  Platform,
+  Animated as RNAnimated,
+  StyleSheet,
+  TouchableOpacity,
+  useColorScheme,
+  View,
+} from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,7 +25,8 @@ type TabBarProps = MaterialTopTabBarProps & {
 
 function TopTabBar({ state, descriptors, navigation, position, headerTitle }: TabBarProps) {
   const queryClient = useQueryClient();
-  const { colors, dark } = useTheme();
+  const { colors } = useTheme();
+  const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const topTabBarHeight = useTopTabBarHeight();
   const { buildHref } = useLinkBuilder();
@@ -34,9 +42,13 @@ function TopTabBar({ state, descriptors, navigation, position, headerTitle }: Ta
     <Animated.View style={[styles.container, headerTransform]}>
       <BlurView
         intensity={BlueViewIntensity}
-        tint={dark ? 'dark' : 'light'}
+        tint="systemChromeMaterial"
         style={[
-          Platform.OS === 'ios' ? styles.blurView : {},
+          Platform.OS === 'ios'
+            ? styles.blurView
+            : {
+                backgroundColor: Colors[colorScheme ?? 'light'].background,
+              },
           {
             paddingTop: insets.top,
             height: topTabBarHeight,

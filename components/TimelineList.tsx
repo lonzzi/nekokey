@@ -21,6 +21,7 @@ import {
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   RefreshControl,
   StyleSheet,
   TouchableOpacity,
@@ -160,6 +161,9 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={{
+            paddingTop: Platform.OS === 'ios' ? 0 : topTabBarHeight,
+          }}
           contentInset={{ top: topTabBarHeight, bottom: bottomTabHeight }}
           contentOffset={{ x: 0, y: -topTabBarHeight }}
           scrollIndicatorInsets={{ top: topTabBarHeight, bottom: bottomTabHeight }}
