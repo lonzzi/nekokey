@@ -9,19 +9,19 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import 'react-native-reanimated';
 
+import { MainScrollProvider } from '@/components/MainScrollProvider';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { initMisskeyClient } from '@/lib/api';
+import { AuthProvider } from '@/lib/contexts/AuthContext';
+import { ShellModeProvider } from '@/lib/contexts/ShellMode';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { persistQueryClient } from '@tanstack/query-persist-client-core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 
+import '../global.css';
 import '../i18n/config';
-
-import { MainScrollProvider } from '@/components/MainScrollProvider';
-import { initMisskeyClient } from '@/lib/api';
-import { AuthProvider } from '@/lib/contexts/AuthContext';
-import { ShellModeProvider } from '@/lib/contexts/ShellMode';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

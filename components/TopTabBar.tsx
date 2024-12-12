@@ -74,9 +74,7 @@ function TopTabBar({ state, descriptors, navigation, position, headerTitle }: Ta
               await AsyncStorage.removeItem('server');
             }}
           >
-            <Animated.Text style={[styles.logoutButtonText, { color: colors.primary }]}>
-              登出
-            </Animated.Text>
+            <Animated.Text className="text-red-500">登出</Animated.Text>
           </TouchableOpacity>
 
           <Animated.Text style={[styles.headerText, { color: colors.text }]}>
