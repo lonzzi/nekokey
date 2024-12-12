@@ -1,3 +1,4 @@
+import { useNoteUpdated } from '@/hooks/useNoteUpdated';
 import { useMisskeyApi } from '@/lib/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -14,14 +15,28 @@ import { ThemedView } from './ThemedView';
 interface NoteProps {
   note: NoteType;
   onReply?: () => void;
+  endpoint: string;
 }
 
-export function Note({ note, onReply }: NoteProps) {
+export function Note({ note, onReply, endpoint }: NoteProps) {
   const [isLiked, setIsLiked] = useState(!!note.myReaction);
   const [likeCount, setLikeCount] = useState(note.reactions?.['👍'] || 0);
   const api = useMisskeyApi();
   const queryClient = useQueryClient();
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
+
+  useNoteUpdated({
+    endpoint,
+    note,
+    onReacted: () => {
+      setLikeCount((prev) => prev + 1);
+      setIsLiked(true);
+    },
+    onUnreacted: () => {
+      setLikeCount((prev) => prev - 1);
+      setIsLiked(false);
+    },
+  });
 
   const likeMutation = useMutation({
     mutationFn: async () => {
@@ -36,10 +51,12 @@ export function Note({ note, onReply }: NoteProps) {
         });
       }
     },
-    onSuccess: () => {
+    onMutate: () => {
       setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
       setIsLiked(!isLiked);
-      queryClient.invalidateQueries({ queryKey: ['timeline'] });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [endpoint] });
     },
     onError: () => {
       Alert.alert('操作失败', '请稍后重试');
@@ -55,7 +72,7 @@ export function Note({ note, onReply }: NoteProps) {
     },
     onSuccess: () => {
       Alert.alert('转发成功');
-      queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      queryClient.invalidateQueries({ queryKey: [endpoint] });
     },
     onError: () => {
       Alert.alert('转发失败', '请稍后重试');
@@ -157,8 +174,16 @@ export function Note({ note, onReply }: NoteProps) {
       <Image source={{ uri: note.user.avatarUrl || '' }} style={styles.avatar} />
       <View style={styles.content}>
         <View style={styles.header}>
-          <ThemedText type="defaultSemiBold">{note.user.name}</ThemedText>
-          <ThemedText style={styles.username}>@{note.user.username}</ThemedText>
+          <View style={styles.userInfo}>
+            <View style={styles.nameContainer}>
+              <ThemedText type="defaultSemiBold" style={styles.name} numberOfLines={1}>
+                {note.user.name}
+              </ThemedText>
+              <ThemedText style={styles.username} numberOfLines={1}>
+                @{note.user.username}
+              </ThemedText>
+            </View>
+          </View>
           <ThemedText style={styles.time}>
             {formatDistanceToNow(new Date(note.createdAt), { locale: zhCN, addSuffix: true })}
           </ThemedText>
@@ -214,14 +239,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+    justifyContent: 'space-between',
+  },
+  userInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  nameContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  name: {
+    fontSize: 14,
+    marginRight: 4,
   },
   username: {
-    marginLeft: 4,
     color: '#666',
+    fontSize: 14,
   },
   time: {
-    marginLeft: 'auto',
     color: '#666',
+    fontSize: 14,
+    // flexShrink: 0,
   },
   text: {
     fontSize: 16,

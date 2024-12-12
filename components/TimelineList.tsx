@@ -118,12 +118,13 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
     );
 
     const renderItem = useCallback(
-      ({ item }: { item: NoteType }) => <MemoizedNote note={item} />,
+      ({ item }: { item: NoteType }) => <MemoizedNote endpoint={endpoint} note={item} />,
       [],
     );
 
     useEffect(() => {
       const channel = stream.useChannel(TIMELINE_CHANNEL_MAP[endpoint] as 'homeTimeline');
+
       channel.on('note', (note) => {
         if (scrollOffset.value > 0) {
           setShowScrollTop(true);
