@@ -5,12 +5,13 @@ import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { loaded } = useAuth();
+  const { loaded, user } = useAuth();
 
   if (!loaded) {
     return <LoadingScreen />;
@@ -49,7 +50,22 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          tabBarIcon: ({ color, focused }) =>
+            user ? (
+              <Image
+                source={{ uri: user.avatarUrl ?? '' }}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: focused ? color : 'transparent',
+                }}
+                priority="high"
+              />
+            ) : (
+              <IconSymbol size={28} name="person.fill" color={color} />
+            ),
         }}
       />
     </Tabs>

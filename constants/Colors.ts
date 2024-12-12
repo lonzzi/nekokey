@@ -5,7 +5,7 @@
 
 import { ViewStyle } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
+const tintColorLight = '#000';
 const tintColorDark = '#fff';
 
 export const Colors = {

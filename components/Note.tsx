@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { Image as HighPriorityImage } from 'expo-image';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useState } from 'react';
 import { Alert, Image, Modal, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -171,7 +172,7 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
 
   return (
     <ThemedView style={styles.container}>
-      <Image source={{ uri: note.user.avatarUrl || '' }} style={styles.avatar} />
+      <HighPriorityImage source={{ uri: note.user.avatarUrl || '' }} style={styles.avatar} />
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.userInfo}>
