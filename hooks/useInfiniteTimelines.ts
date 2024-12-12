@@ -1,5 +1,5 @@
 import { useMisskeyApi } from '@/lib/api';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { Endpoints } from 'misskey-js';
 
 export type TimelineEndpoint = keyof Pick<
@@ -21,11 +21,12 @@ export const useInfiniteTimelines = (endpoint: TimelineEndpoint) => {
       return await api.request<'notes/timeline', Endpoints[TimelineEndpoint]['req']>(
         endpoint as 'notes/timeline',
         {
-          limit: 10,
+          limit: 20,
           untilId: pageParam,
         },
       );
     },
+    placeholderData: keepPreviousData,
     initialPageParam: undefined,
     getNextPageParam: (lastPage) => {
       if (!lastPage || lastPage.length === 0) return undefined;

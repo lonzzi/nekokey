@@ -83,7 +83,7 @@ export const TimelineList = ({ endpoint }: { endpoint: TimelineEndpoint }) => {
         if (!oldData) return { pages: [[note]], pageParams: [undefined] };
         return {
           ...oldData,
-          pages: [[note], ...oldData.pages.slice(1)],
+          pages: [[note, ...oldData.pages[0]], ...oldData.pages.slice(1)],
         };
       });
     });
@@ -107,7 +107,7 @@ export const TimelineList = ({ endpoint }: { endpoint: TimelineEndpoint }) => {
         ref={listRef}
         data={query.data}
         renderItem={renderItem}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
+        keyExtractor={(item) => item.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentInset={{ top: topTabBarHeight, bottom: bottomTabHeight }}
         contentOffset={{ x: 0, y: -topTabBarHeight }}
@@ -130,6 +130,7 @@ export const TimelineList = ({ endpoint }: { endpoint: TimelineEndpoint }) => {
         maintainVisibleContentPosition={{
           minIndexForVisible: 0,
         }}
+        removeClippedSubviews={true}
         ListFooterComponent={() =>
           query.hasNextPage ? (
             <ThemedView style={styles.footerContainer}>
@@ -137,7 +138,6 @@ export const TimelineList = ({ endpoint }: { endpoint: TimelineEndpoint }) => {
             </ThemedView>
           ) : null
         }
-        removeClippedSubviews={true}
       />
       {showScrollTop && (
         <TouchableOpacity
