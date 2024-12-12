@@ -8,7 +8,7 @@ import { Image as HighPriorityImage } from 'expo-image';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useState } from 'react';
 import { Alert, Image, Modal, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
-import ImageViewer from 'react-native-image-zoom-viewer';
+import Gallery from 'react-native-awesome-gallery';
 
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
@@ -154,17 +154,27 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
 
     const images =
       note.files?.map((file) => ({
-        url: file.url,
+        uri: file.url,
       })) || [];
 
     return (
       <Modal visible={selectedImageIndex !== -1} transparent={true}>
-        <ImageViewer
-          imageUrls={images}
-          index={selectedImageIndex}
-          onCancel={() => setSelectedImageIndex(-1)}
-          enableSwipeDown
-          onSwipeDown={() => setSelectedImageIndex(-1)}
+        <Gallery
+          data={images}
+          initialIndex={selectedImageIndex}
+          onSwipeToClose={() => setSelectedImageIndex(-1)}
+          keyExtractor={(item) => item.uri}
+          renderItem={({ item }) => (
+            <Image
+              source={{ uri: item.uri }}
+              style={{
+                flex: 1,
+                width: '100%',
+                height: '100%',
+              }}
+              resizeMode="contain"
+            />
+          )}
         />
       </Modal>
     );
