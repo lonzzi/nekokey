@@ -27,6 +27,8 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
     height: 0,
   });
   const imageCount = images.length;
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [imageAspectRatio, setImageAspectRatio] = useState(0);
 
   const getImageStyle = (index: number) => {
     switch (imageCount) {
@@ -44,11 +46,22 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      onLayout={(event) => {
+        const { width } = event.nativeEvent.layout;
+        setContainerWidth(width);
+        setImageAspectRatio((images[0]?.height ?? 0) / (images[0]?.width ?? 1));
+      }}
+    >
       <View
         style={[
           styles.imageContainer,
-          imageCount === 1 && styles.singleImageContainer,
+          imageCount === 1 &&
+            styles.singleImageContainer && {
+              width: containerWidth,
+              height: imageAspectRatio * containerWidth,
+            },
           imageCount === 2 && styles.doubleImageContainer,
           imageCount >= 3 && styles.multiImageContainer,
         ]}
