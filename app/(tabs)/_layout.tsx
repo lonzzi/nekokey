@@ -47,9 +47,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="profile/[user]"
         options={{
-          title: 'Explore',
+          title: 'MyProfile',
           tabBarIcon: ({ color, focused }) =>
             user ? (
               <Image
@@ -67,6 +67,7 @@ export default function TabLayout() {
               <IconSymbol size={28} name="person.fill" color={color} />
             ),
         }}
+        initialParams={{ user: `${user?.username}` }}
       />
     </Tabs>
   );

@@ -14,7 +14,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import Gallery from 'react-native-awesome-gallery';
@@ -145,7 +145,7 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
         ]}
       >
         {note.files.slice(0, 4).map((file, index) => (
-          <TouchableOpacity
+          <TouchableWithoutFeedback
             key={file.id}
             onPress={() => handleImagePress(index)}
             style={getImageStyle(index)}
@@ -155,7 +155,7 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
               style={StyleSheet.absoluteFill}
               resizeMode={imageCount === 1 ? 'contain' : 'cover'}
             />
-          </TouchableOpacity>
+          </TouchableWithoutFeedback>
         ))}
       </View>
     );
@@ -176,7 +176,12 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
     };
 
     return (
-      <Modal visible={selectedImageIndex !== -1} transparent={true}>
+      <Modal
+        visible={selectedImageIndex !== -1}
+        transparent={true}
+        animationType="fade"
+        hardwareAccelerated
+      >
         {infoVisible && (
           <Animated.View
             entering={FadeInUp.duration(250)}
@@ -199,21 +204,26 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
           initialIndex={selectedImageIndex}
           onSwipeToClose={() => setSelectedImageIndex(-1)}
           keyExtractor={(item) => item.uri}
-          renderItem={({ item }) => (
+          renderItem={({ item, setImageDimensions }) => (
             <View style={{ flex: 1 }}>
               <HighPriorityImage
                 source={{ uri: item.uri }}
-                style={{
-                  flex: 1,
-                  width: '100%',
-                  height: '100%',
-                }}
+                style={StyleSheet.absoluteFillObject}
                 contentFit="contain"
+                onLoad={(e) => {
+                  const { width, height } = e.source;
+                  setImageDimensions({ width, height });
+                }}
               />
             </View>
           )}
           loop
           onTap={onTap}
+          onScaleEnd={(scale) => {
+            if (scale < 0.8) {
+              setSelectedImageIndex(-1);
+            }
+          }}
         />
       </Modal>
     );
