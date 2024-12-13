@@ -7,8 +7,19 @@ import { zhCN } from 'date-fns/locale';
 import { Image as HighPriorityImage } from 'expo-image';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useState } from 'react';
-import { Alert, Image, Modal, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import Gallery from 'react-native-awesome-gallery';
+import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
@@ -25,6 +36,7 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
   const api = useMisskeyApi();
   const queryClient = useQueryClient();
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
+  const { top } = useSafeAreaInsets();
 
   useNoteUpdated({
     endpoint,
@@ -150,6 +162,8 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
   };
 
   const renderImageViewer = () => {
+    const [infoVisible, setInfoVisible] = useState(false);
+
     if (selectedImageIndex === -1) return null;
 
     const images =
@@ -157,24 +171,49 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
         uri: file.url,
       })) || [];
 
+    const onTap = () => {
+      setInfoVisible(!infoVisible);
+    };
+
     return (
       <Modal visible={selectedImageIndex !== -1} transparent={true}>
+        {infoVisible && (
+          <Animated.View
+            entering={FadeInUp.duration(250)}
+            exiting={FadeOutUp.duration(250)}
+            className="absolute w-full bg-black/50 z-[1]"
+            style={{
+              height: top + 60,
+              paddingTop: top,
+            }}
+          >
+            <View className="flex-1 items-center justify-center">
+              <Text className="text-white text-2xl font-bold">
+                {selectedImageIndex + 1} of {images.length}
+              </Text>
+            </View>
+          </Animated.View>
+        )}
         <Gallery
           data={images}
           initialIndex={selectedImageIndex}
           onSwipeToClose={() => setSelectedImageIndex(-1)}
           keyExtractor={(item) => item.uri}
           renderItem={({ item }) => (
-            <Image
-              source={{ uri: item.uri }}
-              style={{
-                flex: 1,
-                width: '100%',
-                height: '100%',
-              }}
-              resizeMode="contain"
-            />
+            <View style={{ flex: 1 }}>
+              <HighPriorityImage
+                source={{ uri: item.uri }}
+                style={{
+                  flex: 1,
+                  width: '100%',
+                  height: '100%',
+                }}
+                contentFit="contain"
+              />
+            </View>
           )}
+          loop
+          onTap={onTap}
         />
       </Modal>
     );
