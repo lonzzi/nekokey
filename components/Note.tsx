@@ -7,20 +7,9 @@ import { zhCN } from 'date-fns/locale';
 import { Image as HighPriorityImage } from 'expo-image';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useState } from 'react';
-import {
-  Alert,
-  Image,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableWithoutFeedback,
-  View,
-} from 'react-native';
-import Gallery from 'react-native-awesome-gallery';
-import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
+import ImagePreview from './ImagePreview';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -35,8 +24,6 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
   const [likeCount, setLikeCount] = useState(note.reactions?.['👍'] || 0);
   const api = useMisskeyApi();
   const queryClient = useQueryClient();
-  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
-  const { top } = useSafeAreaInsets();
 
   useNoteUpdated({
     endpoint,
@@ -88,7 +75,7 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
       queryClient.invalidateQueries({ queryKey: [endpoint] });
     },
     onError: () => {
-      Alert.alert('转发失败', '请稍后重试');
+      Alert.alert('���发失败', '请稍后重试');
     },
   });
 
@@ -98,10 +85,6 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
 
   const handleRenote = () => {
     renoteMutation.mutate();
-  };
-
-  const handleImagePress = (index: number) => {
-    setSelectedImageIndex(index);
   };
 
   const renderRenote = () => {
@@ -117,116 +100,14 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
   const renderImages = () => {
     if (!note.files?.length) return null;
 
-    const imageCount = note.files.length;
+    const images = note.files.map((file) => ({
+      uri: file.url,
+      thumbnailUrl: file.thumbnailUrl,
+      width: file.properties.width,
+      height: file.properties.height,
+    }));
 
-    // 根据图片数量决定布局样式
-    const getImageStyle = (index: number) => {
-      switch (imageCount) {
-        case 1:
-          return styles.singleImage;
-        case 2:
-          return styles.doubleImage;
-        case 3:
-          return index === 0 ? styles.tripleMainImage : styles.tripleSecondaryImage;
-        case 4:
-          return styles.quadImage;
-        default:
-          return styles.quadImage;
-      }
-    };
-
-    return (
-      <View
-        style={[
-          styles.imageContainer,
-          imageCount === 1 && styles.singleImageContainer,
-          imageCount === 2 && styles.doubleImageContainer,
-          imageCount >= 3 && styles.multiImageContainer,
-        ]}
-      >
-        {note.files.slice(0, 4).map((file, index) => (
-          <TouchableWithoutFeedback
-            key={file.id}
-            onPress={() => handleImagePress(index)}
-            style={getImageStyle(index)}
-          >
-            <Image
-              source={{ uri: file.url }}
-              style={StyleSheet.absoluteFill}
-              resizeMode={imageCount === 1 ? 'contain' : 'cover'}
-            />
-          </TouchableWithoutFeedback>
-        ))}
-      </View>
-    );
-  };
-
-  const renderImageViewer = () => {
-    const [infoVisible, setInfoVisible] = useState(false);
-
-    if (selectedImageIndex === -1) return null;
-
-    const images =
-      note.files?.map((file) => ({
-        uri: file.url,
-      })) || [];
-
-    const onTap = () => {
-      setInfoVisible(!infoVisible);
-    };
-
-    return (
-      <Modal
-        visible={selectedImageIndex !== -1}
-        transparent={true}
-        animationType="fade"
-        hardwareAccelerated
-      >
-        {infoVisible && (
-          <Animated.View
-            entering={FadeInUp.duration(250)}
-            exiting={FadeOutUp.duration(250)}
-            className="absolute w-full bg-black/50 z-[1]"
-            style={{
-              height: top + 60,
-              paddingTop: top,
-            }}
-          >
-            <View className="flex-1 items-center justify-center">
-              <Text className="text-white text-2xl font-bold">
-                {selectedImageIndex + 1} of {images.length}
-              </Text>
-            </View>
-          </Animated.View>
-        )}
-        <Gallery
-          data={images}
-          initialIndex={selectedImageIndex}
-          onSwipeToClose={() => setSelectedImageIndex(-1)}
-          keyExtractor={(item) => item.uri}
-          renderItem={({ item, setImageDimensions }) => (
-            <View style={{ flex: 1 }}>
-              <HighPriorityImage
-                source={{ uri: item.uri }}
-                style={StyleSheet.absoluteFillObject}
-                contentFit="contain"
-                onLoad={(e) => {
-                  const { width, height } = e.source;
-                  setImageDimensions({ width, height });
-                }}
-              />
-            </View>
-          )}
-          loop
-          onTap={onTap}
-          onScaleEnd={(scale) => {
-            if (scale < 0.8) {
-              setSelectedImageIndex(-1);
-            }
-          }}
-        />
-      </Modal>
-    );
+    return <ImagePreview images={images} />;
   };
 
   return (
@@ -252,7 +133,6 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
         <ThemedText style={styles.text}>{note.text}</ThemedText>
         {renderImages()}
         {renderRenote()}
-        {renderImageViewer()}
 
         <View style={styles.actions}>
           <Pressable style={styles.actionButton} onPress={onReply}>
@@ -354,50 +234,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginBottom: 4,
-  },
-  imageContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 2,
-    marginVertical: 8,
-  },
-  singleImageContainer: {
-    height: 280,
-  },
-  singleImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  doubleImageContainer: {
-    height: 200,
-  },
-  doubleImage: {
-    width: '49.5%',
-    height: '100%',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  multiImageContainer: {
-    height: 200,
-  },
-  tripleMainImage: {
-    width: '49.5%',
-    height: '100%',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  tripleSecondaryImage: {
-    width: '49.5%',
-    height: '49.5%',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  quadImage: {
-    width: '49.5%',
-    height: '49.5%',
-    borderRadius: 8,
-    overflow: 'hidden',
   },
 });
