@@ -1,5 +1,14 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, FlatList, ListRenderItem, StyleSheet, ViewToken } from 'react-native';
+import {
+  Dimensions,
+  FlatList,
+  ListRenderItem,
+  StyleSheet,
+  TouchableOpacity,
+  ViewToken,
+} from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -10,6 +19,8 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+
+const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 interface ImageViewProps {
   images: string[];
@@ -26,13 +37,21 @@ interface ImageViewProps {
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+const springOptions = {
+  mass: 1.25,
+  damping: 150,
+  stiffness: 900,
+  restDisplacementThreshold: 0.01,
+};
+
 const ImageItem: React.FC<{
   uri: string;
   onRequestClose?: () => void;
   initialPosition?: ImageViewProps['initialPosition'];
   isInitialImage: boolean;
   backgroundOpacity: SharedValue<number>;
-}> = ({ uri, onRequestClose, initialPosition, isInitialImage, backgroundOpacity }) => {
+  isClosed?: boolean;
+}> = ({ uri, onRequestClose, initialPosition, isInitialImage, backgroundOpacity, isClosed }) => {
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -44,10 +63,32 @@ const ImageItem: React.FC<{
   useEffect(() => {
     if (isInitialImage) {
       animation.value = 0;
-      animation.value = withTiming(1, { duration: 300 });
-      backgroundOpacity.value = withTiming(1, { duration: 300 });
+      animation.value = withSpring(1, springOptions);
+      backgroundOpacity.value = withSpring(1, springOptions);
     }
   }, []);
+
+  useEffect(() => {
+    if (isClosed) {
+      animation.value = withSpring(0, springOptions, () => {
+        if (onRequestClose) {
+          runOnJS(onRequestClose)();
+        }
+      });
+      backgroundOpacity.value = withSpring(0, springOptions);
+    }
+  }, [isClosed]);
+
+  // const backdropStyle = useAnimatedStyle(() => {
+  //   let opacity = 1;
+
+  //   const dragProgress = Math.min(Math.abs(verticalTranslate.value) / (SCREEN_HEIGHT / 2), 1);
+  //   opacity -= dragProgress;
+  //   const factor = 100;
+  //   return {
+  //     opacity: Math.round(opacity * factor) / factor,
+  //   };
+  // });
 
   // 处理捏合缩放手势
   const pinchGesture = Gesture.Pinch()
@@ -62,9 +103,9 @@ const ImageItem: React.FC<{
     .onEnd(() => {
       'worklet';
       if (scale.value < 1) {
-        scale.value = withSpring(1);
-        translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
+        scale.value = withTiming(1);
+        translateX.value = withTiming(0);
+        translateY.value = withTiming(0);
       }
     });
 
@@ -74,34 +115,36 @@ const ImageItem: React.FC<{
     .onEnd(() => {
       'worklet';
       if (scale.value > 1) {
-        scale.value = withSpring(1);
-        translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
+        scale.value = withTiming(1);
+        translateX.value = withTiming(0);
+        translateY.value = withTiming(0);
       } else {
-        scale.value = withSpring(2);
+        scale.value = withTiming(2);
       }
     });
 
-  // 单击手势
-  // const singleTapGesture = Gesture.Tap().onEnd(() => {
-  // 'worklet';
-  //   if (onRequestClose) {
-  //     runOnJS(onRequestClose)();
-  //   }
-  // });
-
   // 添加垂直滑动手势
   const verticalPanGesture = Gesture.Pan()
+    .activeOffsetY([-10, 10])
+    .failOffsetX([-10, 10])
+    .maxPointers(1)
     .onChange((event) => {
       'worklet';
+      if (animation.value !== 1) {
+        return;
+      }
+
       verticalTranslate.value = event.translationY;
-      const opacity = Math.max(1 - Math.abs(event.translationY) / 400, 0.3);
-      imageOpacity.value = opacity;
-      backgroundOpacity.value = opacity;
+      let opacity = 1;
+
+      const dragProgress = Math.min(Math.abs(verticalTranslate.value) / (SCREEN_HEIGHT / 2), 1);
+      opacity -= dragProgress;
+      const factor = 100;
+      backgroundOpacity.value = Math.round(opacity * factor) / factor;
     })
     .onEnd((event) => {
       'worklet';
-      if (Math.abs(event.translationY) > 100) {
+      if (Math.abs(event.translationY) > 80) {
         const direction = event.translationY > 0 ? 1 : -1;
         verticalTranslate.value = withTiming(
           direction * SCREEN_HEIGHT,
@@ -121,12 +164,9 @@ const ImageItem: React.FC<{
         imageOpacity.value = withTiming(1);
         backgroundOpacity.value = withTiming(1);
       }
-    })
-    .activeOffsetY([-10, 10])
-    .failOffsetX([-20, 20]);
+    });
 
   const gesture = Gesture.Race(
-    // singleTapGesture,
     doubleTabGesture,
     verticalPanGesture,
     Gesture.Simultaneous(pinchGesture),
@@ -138,10 +178,8 @@ const ImageItem: React.FC<{
       { translateY: translateY.value + verticalTranslate.value },
       { scale: scale.value },
     ],
-    opacity: imageOpacity.value,
   }));
 
-  // 添加背景动画样式
   const backgroundStyle = useAnimatedStyle(() => ({
     backgroundColor: `rgba(0, 0, 0, ${backgroundOpacity.value})`,
   }));
@@ -149,30 +187,63 @@ const ImageItem: React.FC<{
   const interpolatedStyle = useAnimatedStyle(() => {
     if (!isInitialImage || !initialPosition) return {};
 
-    const interpolatePosition = (start: number, end: number) =>
-      start + (end - start) * animation.value;
+    const imageAspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+    const thumbAspect = initialPosition.width / initialPosition.height;
+
+    let uncroppedInitialWidth, uncroppedInitialHeight;
+    if (imageAspect > thumbAspect) {
+      uncroppedInitialWidth = initialPosition.height * imageAspect;
+      uncroppedInitialHeight = initialPosition.height;
+    } else {
+      uncroppedInitialWidth = initialPosition.width;
+      uncroppedInitialHeight = initialPosition.width / imageAspect;
+    }
+
+    let finalWidth, finalHeight;
+    if (imageAspect > thumbAspect) {
+      finalWidth = SCREEN_HEIGHT * imageAspect;
+      finalHeight = SCREEN_HEIGHT;
+    } else {
+      finalWidth = SCREEN_WIDTH;
+      finalHeight = SCREEN_WIDTH / imageAspect;
+    }
+
+    const initialScale = Math.min(
+      uncroppedInitialWidth / finalWidth,
+      uncroppedInitialHeight / finalHeight,
+    );
+
+    const screenCenterX = SCREEN_WIDTH / 2;
+    const screenCenterY = SCREEN_HEIGHT / 2;
+    const thumbnailCenterX = initialPosition.x + initialPosition.width / 2;
+    const thumbnailCenterY = initialPosition.y + initialPosition.height / 2;
+
+    const initialTranslateX = thumbnailCenterX - screenCenterX;
+    const initialTranslateY = thumbnailCenterY - screenCenterY;
+
+    const scale = initialScale + (1 - initialScale) * animation.value;
+    const translateX = initialTranslateX * (1 - animation.value);
+    const translateY = initialTranslateY * (1 - animation.value);
 
     return {
       position: 'absolute',
-      width: interpolatePosition(initialPosition.width, SCREEN_WIDTH),
-      height: interpolatePosition(initialPosition.height, SCREEN_HEIGHT),
-      left: interpolatePosition(initialPosition.x, 0),
-      top: interpolatePosition(initialPosition.y, 0),
-      opacity: animation.value,
+      width: finalWidth,
+      height: finalHeight,
+      transform: [{ translateX: translateX }, { translateY: translateY }, { scale: scale }],
     };
   });
 
   return (
     <Animated.View style={[styles.imageContainer, backgroundStyle]}>
       <GestureDetector gesture={gesture}>
-        <Animated.Image
+        <AnimatedImage
           source={{ uri }}
           style={[
             styles.image,
             animatedStyle,
             isInitialImage && initialPosition ? interpolatedStyle : null,
           ]}
-          resizeMode="contain"
+          contentFit="contain"
         />
       </GestureDetector>
     </Animated.View>
@@ -190,6 +261,7 @@ const ImageView: React.FC<ImageViewProps> = ({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const flatListRef = useRef<FlatList>(null);
   const backgroundOpacity = useSharedValue(0);
+  const [isClosed, setIsClosed] = useState(false);
 
   const backgroundStyle = useAnimatedStyle(() => ({
     backgroundColor: `rgba(0, 0, 0, ${backgroundOpacity.value})`,
@@ -207,6 +279,7 @@ const ImageView: React.FC<ImageViewProps> = ({
       initialPosition={initialPosition}
       isInitialImage={index === initialIndex}
       backgroundOpacity={backgroundOpacity}
+      isClosed={isClosed}
     />
   );
 
@@ -228,6 +301,9 @@ const ImageView: React.FC<ImageViewProps> = ({
   return (
     <GestureHandlerRootView style={styles.container}>
       <Animated.View style={backgroundStyle} />
+      <TouchableOpacity style={styles.closeButton} onPress={() => setIsClosed(true)}>
+        <Ionicons name="close" size={24} color="white" />
+      </TouchableOpacity>
       <FlatList
         ref={flatListRef}
         data={images}
@@ -261,6 +337,15 @@ const styles = StyleSheet.create({
   image: {
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
   },
 });
 

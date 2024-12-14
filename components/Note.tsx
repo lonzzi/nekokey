@@ -9,7 +9,7 @@ import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
-import ImagePreview from './ImagePreview';
+import ImageLayoutGrid from './ImageView/ImageLayoutGrid';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -107,7 +107,7 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
       height: file.properties.height,
     }));
 
-    return <ImagePreview images={images} />;
+    return <ImageLayoutGrid images={images} />;
   };
 
   return (

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 
 import ImageView from './ImageView';
 
@@ -60,32 +60,32 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
           imageCount === 1 &&
             styles.singleImageContainer && {
               width: containerWidth,
-              height: imageAspectRatio * containerWidth,
+              height: imageAspectRatio * containerWidth || 280,
             },
           imageCount === 2 && styles.doubleImageContainer,
           imageCount >= 3 && styles.multiImageContainer,
         ]}
       >
         {images.slice(0, 4).map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={getImageStyle(index)}
-            onPress={(event) => {
-              'worklet';
-              const { target } = event;
-              target.measure((x, y, width, height, pageX, pageY) => {
-                setSelectedImagePosition({ x: pageX, y: pageY, width, height });
-                setSelectedIndex(index);
-                setModalVisible(true);
-              });
-            }}
-          >
-            <Image source={{ uri: item.uri }} style={styles.thumbnailImage} resizeMode="cover" />
-          </TouchableOpacity>
+          <View key={index} style={getImageStyle(index)}>
+            <TouchableWithoutFeedback
+              onPress={(event) => {
+                'worklet';
+                const { target } = event;
+                target.measure((x, y, width, height, pageX, pageY) => {
+                  setSelectedImagePosition({ x: pageX, y: pageY, width, height });
+                  setSelectedIndex(index);
+                  setModalVisible(true);
+                });
+              }}
+            >
+              <Image source={{ uri: item.uri }} style={styles.thumbnailImage} resizeMode="cover" />
+            </TouchableWithoutFeedback>
+          </View>
         ))}
       </View>
 
-      <Modal visible={modalVisible} transparent animationType="none">
+      <Modal visible={modalVisible} transparent animationType="none" statusBarTranslucent>
         <ImageView
           images={images.map((image) => image.uri)}
           initialIndex={selectedIndex}
