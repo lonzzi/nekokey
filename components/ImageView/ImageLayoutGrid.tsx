@@ -87,7 +87,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
 
       <Modal visible={modalVisible} transparent animationType="none" statusBarTranslucent>
         <ImageView
-          images={images.map((image) => image.uri)}
+          images={images.map((image) => image)}
           initialIndex={selectedIndex}
           onRequestClose={() => setModalVisible(false)}
           initialPosition={selectedImagePosition}

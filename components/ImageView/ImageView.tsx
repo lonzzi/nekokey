@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Dimensions,
   FlatList,
   ListRenderItem,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   StyleSheet,
   TouchableOpacity,
   ViewToken,
@@ -14,16 +16,18 @@ import Animated, {
   Easing,
   runOnJS,
   SharedValue,
+  useAnimatedReaction,
+  useAnimatedRef,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
-const AnimatedImage = Animated.createAnimatedComponent(Image);
+import { ImageItemProps } from './ImageLayoutGrid';
 
 interface ImageViewProps {
-  images: string[];
+  images: ImageItemProps[];
   initialIndex?: number;
   onIndexChange?: (index: number) => void;
   onRequestClose?: () => void;
@@ -45,92 +49,109 @@ const springOptions = {
 };
 
 const ImageItem: React.FC<{
-  uri: string;
+  image: ImageItemProps;
   onRequestClose?: () => void;
   initialPosition?: ImageViewProps['initialPosition'];
   isInitialImage: boolean;
   backgroundOpacity: SharedValue<number>;
-  isClosed?: boolean;
-}> = ({ uri, onRequestClose, initialPosition, isInitialImage, backgroundOpacity, isClosed }) => {
+  isClosed: SharedValue<boolean>;
+}> = ({ image, onRequestClose, initialPosition, isInitialImage, backgroundOpacity, isClosed }) => {
   const scale = useSharedValue(1);
-  const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const verticalTranslate = useSharedValue(0);
-  const imageOpacity = useSharedValue(1);
   const animation = useSharedValue(0);
+  const scrollViewRef = useAnimatedRef<Animated.ScrollView>();
+  const [scaled, setScaled] = useState(false);
 
-  useEffect(() => {
-    if (isInitialImage) {
-      animation.value = 0;
-      animation.value = withSpring(1, springOptions);
-      backgroundOpacity.value = withSpring(1, springOptions);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isClosed) {
-      animation.value = withSpring(0, springOptions, () => {
-        if (onRequestClose) {
-          runOnJS(onRequestClose)();
-        }
-      });
-      backgroundOpacity.value = withSpring(0, springOptions);
-    }
-  }, [isClosed]);
-
-  // const backdropStyle = useAnimatedStyle(() => {
-  //   let opacity = 1;
-
-  //   const dragProgress = Math.min(Math.abs(verticalTranslate.value) / (SCREEN_HEIGHT / 2), 1);
-  //   opacity -= dragProgress;
-  //   const factor = 100;
-  //   return {
-  //     opacity: Math.round(opacity * factor) / factor,
-  //   };
-  // });
-
-  // 处理捏合缩放手势
-  const pinchGesture = Gesture.Pinch()
-    .onStart(() => {
-      'worklet';
-      savedScale.value = scale.value;
-    })
-    .onUpdate((event) => {
-      'worklet';
-      scale.value = savedScale.value * event.scale;
-    })
-    .onEnd(() => {
-      'worklet';
-      if (scale.value < 1) {
-        scale.value = withTiming(1);
-        translateX.value = withTiming(0);
-        translateY.value = withTiming(0);
+  useAnimatedReaction(
+    () => isInitialImage,
+    (isInitial) => {
+      if (isInitial) {
+        animation.value = 0;
+        animation.value = withSpring(1, springOptions);
+        backgroundOpacity.value = withSpring(1, springOptions);
       }
-    });
+    },
+    [isInitialImage],
+  );
 
-  // 双击手势
-  const doubleTabGesture = Gesture.Tap()
+  useAnimatedReaction(
+    () => isClosed.value,
+    (closed) => {
+      if (closed) {
+        backgroundOpacity.value = withSpring(0, springOptions);
+        animation.value = withSpring(0, springOptions, () => {
+          if (onRequestClose) {
+            runOnJS(onRequestClose)();
+          }
+        });
+      }
+    },
+    [isClosed],
+  );
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    'worklet';
+    const nextIsScaled = event.nativeEvent.zoomScale > 1;
+    if (scaled !== nextIsScaled) {
+      setScaled(nextIsScaled);
+    }
+  };
+
+  const zoomTo = (rect: { x: number; y: number; width: number; height: number }) => {
+    const scrollResponder = scrollViewRef?.current?.getScrollResponder();
+    scrollResponder?.scrollResponderZoomTo({
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      animated: true,
+    });
+  };
+
+  const singleTap = Gesture.Tap().onEnd(() => {
+    'worklet';
+    // if (onRequestClose) {
+    //   runOnJS(onRequestClose)();
+    // }
+  });
+
+  const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
-    .onEnd(() => {
+    .onEnd((e) => {
       'worklet';
-      if (scale.value > 1) {
-        scale.value = withTiming(1);
-        translateX.value = withTiming(0);
-        translateY.value = withTiming(0);
+      const willZoom = !scaled;
+      let zoomRect;
+
+      if (willZoom) {
+        const scale = 2;
+        const width = SCREEN_WIDTH / scale;
+        const height = SCREEN_HEIGHT / scale;
+        const x = Math.max(0, e.absoluteX - width / 2);
+        const y = Math.max(0, e.absoluteY - height / 2);
+
+        zoomRect = { x, y, width, height };
       } else {
-        scale.value = withTiming(2);
+        zoomRect = {
+          x: 0,
+          y: 0,
+          width: SCREEN_WIDTH,
+          height: SCREEN_HEIGHT,
+        };
       }
+
+      runOnJS(zoomTo)(zoomRect);
     });
 
-  // 添加垂直滑动手势
   const verticalPanGesture = Gesture.Pan()
     .activeOffsetY([-10, 10])
     .failOffsetX([-10, 10])
     .maxPointers(1)
+    .enabled(!scaled)
     .onChange((event) => {
       'worklet';
-      if (animation.value !== 1) {
+      if (animation.value !== 1 || scale.value !== 1) {
         return;
       }
 
@@ -144,7 +165,11 @@ const ImageItem: React.FC<{
     })
     .onEnd((event) => {
       'worklet';
-      if (Math.abs(event.translationY) > 80) {
+      if (scale.value !== 1) {
+        return;
+      }
+
+      if (Math.abs(event.velocityY) > 200) {
         const direction = event.translationY > 0 ? 1 : -1;
         verticalTranslate.value = withTiming(
           direction * SCREEN_HEIGHT,
@@ -161,16 +186,11 @@ const ImageItem: React.FC<{
         backgroundOpacity.value = withTiming(0);
       } else {
         verticalTranslate.value = withTiming(0);
-        imageOpacity.value = withTiming(1);
         backgroundOpacity.value = withTiming(1);
       }
     });
 
-  const gesture = Gesture.Race(
-    doubleTabGesture,
-    verticalPanGesture,
-    Gesture.Simultaneous(pinchGesture),
-  );
+  const gesture = Gesture.Exclusive(verticalPanGesture, doubleTap, singleTap);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -178,10 +198,6 @@ const ImageItem: React.FC<{
       { translateY: translateY.value + verticalTranslate.value },
       { scale: scale.value },
     ],
-  }));
-
-  const backgroundStyle = useAnimatedStyle(() => ({
-    backgroundColor: `rgba(0, 0, 0, ${backgroundOpacity.value})`,
   }));
 
   const interpolatedStyle = useAnimatedStyle(() => {
@@ -234,19 +250,40 @@ const ImageItem: React.FC<{
   });
 
   return (
-    <Animated.View style={[styles.imageContainer, backgroundStyle]}>
-      <GestureDetector gesture={gesture}>
-        <AnimatedImage
-          source={{ uri }}
-          style={[
-            styles.image,
-            animatedStyle,
-            isInitialImage && initialPosition ? interpolatedStyle : null,
-          ]}
-          contentFit="contain"
-        />
-      </GestureDetector>
-    </Animated.View>
+    <GestureDetector gesture={gesture}>
+      <Animated.ScrollView
+        ref={scrollViewRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}
+        pinchGestureEnabled
+        maximumZoomScale={3}
+        minimumZoomScale={1}
+        showsHorizontalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        bounces={scaled}
+        centerContent
+      >
+        <Animated.View style={styles.imageContainer}>
+          <Animated.View
+            style={[
+              styles.image,
+              animatedStyle,
+              isInitialImage && initialPosition ? interpolatedStyle : null,
+            ]}
+          >
+            <Image
+              style={{ flex: 1 }}
+              source={{ uri: image.uri }}
+              placeholder={{ uri: image.thumbnailUrl }}
+              contentFit="contain"
+              placeholderContentFit="contain"
+            />
+          </Animated.View>
+        </Animated.View>
+      </Animated.ScrollView>
+    </GestureDetector>
   );
 };
 
@@ -261,7 +298,7 @@ const ImageView: React.FC<ImageViewProps> = ({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const flatListRef = useRef<FlatList>(null);
   const backgroundOpacity = useSharedValue(0);
-  const [isClosed, setIsClosed] = useState(false);
+  const isClosed = useSharedValue(false);
 
   const backgroundStyle = useAnimatedStyle(() => ({
     backgroundColor: `rgba(0, 0, 0, ${backgroundOpacity.value})`,
@@ -272,9 +309,9 @@ const ImageView: React.FC<ImageViewProps> = ({
     bottom: 0,
   }));
 
-  const renderItem: ListRenderItem<string> = ({ item: uri, index }) => (
+  const renderItem: ListRenderItem<ImageItemProps> = ({ item, index }) => (
     <ImageItem
-      uri={uri}
+      image={item}
       onRequestClose={onRequestClose}
       initialPosition={initialPosition}
       isInitialImage={index === initialIndex}
@@ -301,7 +338,12 @@ const ImageView: React.FC<ImageViewProps> = ({
   return (
     <GestureHandlerRootView style={styles.container}>
       <Animated.View style={backgroundStyle} />
-      <TouchableOpacity style={styles.closeButton} onPress={() => setIsClosed(true)}>
+      <TouchableOpacity
+        style={styles.closeButton}
+        onPress={() => {
+          isClosed.value = true;
+        }}
+      >
         <Ionicons name="close" size={24} color="white" />
       </TouchableOpacity>
       <FlatList
@@ -331,6 +373,14 @@ const styles = StyleSheet.create({
   imageContainer: {
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
