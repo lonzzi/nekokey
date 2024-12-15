@@ -1,17 +1,12 @@
+import { Image } from 'expo-image';
 import React, { useState } from 'react';
-import { Image, Modal, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
+import { Modal, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 
+import { ImageSource } from './ImageItem';
 import ImageView from './ImageView';
 
-export interface ImageItemProps {
-  uri: string;
-  thumbnailUrl?: string | null;
-  width?: number;
-  height?: number;
-}
-
 interface ImagePreviewProps {
-  images: ImageItemProps[];
+  images: ImageSource[];
   numColumns?: number;
   imageSize?: number;
   spacing?: number;
@@ -66,23 +61,50 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
           imageCount >= 3 && styles.multiImageContainer,
         ]}
       >
-        {images.slice(0, 4).map((item, index) => (
-          <View key={index} style={getImageStyle(index)}>
-            <TouchableWithoutFeedback
-              onPress={(event) => {
-                'worklet';
-                const { target } = event;
-                target.measure((x, y, width, height, pageX, pageY) => {
-                  setSelectedImagePosition({ x: pageX, y: pageY, width, height });
-                  setSelectedIndex(index);
-                  setModalVisible(true);
-                });
-              }}
+        {images.slice(0, imageCount === 3 ? 3 : 4).map((item, index) => {
+          const isTripleLayout = imageCount === 3;
+          const containerStyle = isTripleLayout
+            ? index === 0
+              ? styles.tripleMainImage
+              : [styles.tripleSecondaryImage, { height: '49.5%' as const }]
+            : getImageStyle(index);
+
+          return (
+            <View
+              key={index}
+              style={[
+                containerStyle,
+                isTripleLayout &&
+                  index > 0 && {
+                    position: 'absolute',
+                    right: 0,
+                    top: index === 1 ? 0 : '50.5%',
+                    width: '49.5%',
+                  },
+              ]}
             >
-              <Image source={{ uri: item.uri }} style={styles.thumbnailImage} resizeMode="cover" />
-            </TouchableWithoutFeedback>
-          </View>
-        ))}
+              <TouchableWithoutFeedback
+                onPress={(event) => {
+                  'worklet';
+                  const { target } = event;
+                  target.measure((x, y, width, height, pageX, pageY) => {
+                    setSelectedImagePosition({ x: pageX, y: pageY, width, height });
+                    setSelectedIndex(index);
+                    setModalVisible(true);
+                  });
+                }}
+              >
+                <Image
+                  source={{ uri: item.uri }}
+                  style={styles.thumbnailImage}
+                  placeholder={{ uri: item.thumbnailUrl }}
+                  contentFit="cover"
+                  placeholderContentFit="cover"
+                />
+              </TouchableWithoutFeedback>
+            </View>
+          );
+        })}
       </View>
 
       <Modal visible={modalVisible} transparent animationType="none" statusBarTranslucent>
@@ -142,8 +164,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   tripleSecondaryImage: {
-    width: '49.5%',
-    height: '49.5%',
     borderRadius: 8,
     overflow: 'hidden',
   },

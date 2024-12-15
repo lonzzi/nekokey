@@ -1,41 +1,32 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Dimensions,
   FlatList,
   ListRenderItem,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   StyleSheet,
   TouchableWithoutFeedback,
   View,
   ViewToken,
 } from 'react-native';
-import {
-  Gesture,
-  GestureDetector,
-  GestureHandlerRootView,
-  TapGesture,
-} from 'react-native-gesture-handler';
+import { Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
   interpolate,
   runOnJS,
   SharedValue,
   useAnimatedReaction,
-  useAnimatedRef,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ImageItemProps } from './ImageLayoutGrid';
+import ImageItem, { ImageSource } from './ImageItem';
 
-interface ImageViewProps {
-  images: ImageItemProps[];
+export interface ImageViewProps {
+  images: ImageSource[];
   initialIndex?: number;
   onIndexChange?: (index: number) => void;
   onRequestClose?: () => void;
@@ -47,131 +38,52 @@ interface ImageViewProps {
   };
 }
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const springOptions = {
-  mass: 1.25,
-  damping: 150,
-  stiffness: 900,
-  restDisplacementThreshold: 0.01,
-};
-
-const ImageItem: React.FC<{
-  image: ImageItemProps;
+export type ImageViewItemProps = {
+  image: ImageSource;
   onRequestClose?: () => void;
   initialPosition?: ImageViewProps['initialPosition'];
   isInitialImage: boolean;
-  backgroundOpacity: SharedValue<number>;
+  openProgress: SharedValue<number>;
   isClosed: SharedValue<boolean>;
-  singleTap: TapGesture;
-}> = ({
-  image,
-  onRequestClose,
-  initialPosition,
-  isInitialImage,
-  backgroundOpacity,
-  isClosed,
-  singleTap,
-}) => {
+  onTap: () => void;
+};
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const ImageViewItem: React.FC<ImageViewItemProps> = ({ onRequestClose, openProgress, ...rest }) => {
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const verticalTranslate = useSharedValue(0);
-  const animation = useSharedValue(0);
-  const scrollViewRef = useAnimatedRef<Animated.ScrollView>();
   const [scaled, setScaled] = useState(false);
 
-  useAnimatedReaction(
-    () => isInitialImage,
-    (isInitial) => {
-      if (isInitial) {
-        animation.value = 0;
-        animation.value = withSpring(1, springOptions);
-        backgroundOpacity.value = withSpring(1, springOptions);
-      }
-    },
-    [isInitialImage],
-  );
+  const transforms = useDerivedValue(() => {
+    return {
+      scale: scale.value,
+      translateX: translateX.value,
+      translateY: translateY.value,
+      verticalTranslate: verticalTranslate.value,
+    };
+  });
 
-  useAnimatedReaction(
-    () => isClosed.value,
-    (closed) => {
-      if (closed) {
-        backgroundOpacity.value = withSpring(0, springOptions);
-        animation.value = withSpring(0, springOptions, () => {
-          if (onRequestClose) {
-            runOnJS(onRequestClose)();
-          }
-        });
-      }
-    },
-    [isClosed],
-  );
+  const onZoom = useCallback((nextIsScaled: boolean) => {
+    setScaled(nextIsScaled);
+  }, []);
 
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    'worklet';
-    const nextIsScaled = event.nativeEvent.zoomScale > 1;
-    if (scaled !== nextIsScaled) {
-      setScaled(nextIsScaled);
-    }
-  };
-
-  const zoomTo = (rect: { x: number; y: number; width: number; height: number }) => {
-    const scrollResponder = scrollViewRef?.current?.getScrollResponder();
-    scrollResponder?.scrollResponderZoomTo({
-      x: rect.x,
-      y: rect.y,
-      width: rect.width,
-      height: rect.height,
-      animated: true,
-    });
-  };
-
-  const doubleTap = Gesture.Tap()
-    .numberOfTaps(2)
-    .onEnd((e) => {
-      'worklet';
-      const willZoom = !scaled;
-      let zoomRect;
-
-      if (willZoom) {
-        const scale = 2;
-        const width = SCREEN_WIDTH / scale;
-        const height = SCREEN_HEIGHT / scale;
-        const x = Math.max(0, e.absoluteX - width / 2);
-        const y = Math.max(0, e.absoluteY - height / 2);
-
-        zoomRect = { x, y, width, height };
-      } else {
-        zoomRect = {
-          x: 0,
-          y: 0,
-          width: SCREEN_WIDTH,
-          height: SCREEN_HEIGHT,
-        };
-      }
-
-      runOnJS(zoomTo)(zoomRect);
-    });
-
-  const verticalPanGesture = Gesture.Pan()
+  const dismissGesture = Gesture.Pan()
     .activeOffsetY([-10, 10])
     .failOffsetX([-10, 10])
     .maxPointers(1)
     .enabled(!scaled)
     .onChange((event) => {
       'worklet';
-      if (animation.value !== 1 || scale.value !== 1) {
-        return;
-      }
-
       verticalTranslate.value = event.translationY;
       let opacity = 1;
 
       const dragProgress = Math.min(Math.abs(verticalTranslate.value) / (SCREEN_HEIGHT / 2), 1);
       opacity -= dragProgress;
       const factor = 100;
-      backgroundOpacity.value = Math.round(opacity * factor) / factor;
+      openProgress.value = Math.round(opacity * factor) / factor;
     })
     .onEnd((event) => {
       'worklet';
@@ -193,107 +105,23 @@ const ImageItem: React.FC<{
             }
           },
         );
-        backgroundOpacity.value = withTiming(0);
+        openProgress.value = withTiming(0);
       } else {
         verticalTranslate.value = withTiming(0);
-        backgroundOpacity.value = withTiming(1);
+        openProgress.value = withTiming(1);
       }
     });
 
-  const gesture = Gesture.Exclusive(verticalPanGesture, doubleTap, singleTap);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value + verticalTranslate.value },
-      { scale: scale.value },
-    ],
-  }));
-
-  const interpolatedStyle = useAnimatedStyle(() => {
-    if (!isInitialImage || !initialPosition) return {};
-
-    const imageAspect = SCREEN_WIDTH / SCREEN_HEIGHT;
-    const thumbAspect = initialPosition.width / initialPosition.height;
-
-    let uncroppedInitialWidth, uncroppedInitialHeight;
-    if (imageAspect > thumbAspect) {
-      uncroppedInitialWidth = initialPosition.height * imageAspect;
-      uncroppedInitialHeight = initialPosition.height;
-    } else {
-      uncroppedInitialWidth = initialPosition.width;
-      uncroppedInitialHeight = initialPosition.width / imageAspect;
-    }
-
-    let finalWidth, finalHeight;
-    if (imageAspect > thumbAspect) {
-      finalWidth = SCREEN_HEIGHT * imageAspect;
-      finalHeight = SCREEN_HEIGHT;
-    } else {
-      finalWidth = SCREEN_WIDTH;
-      finalHeight = SCREEN_WIDTH / imageAspect;
-    }
-
-    const initialScale = Math.min(
-      uncroppedInitialWidth / finalWidth,
-      uncroppedInitialHeight / finalHeight,
-    );
-
-    const screenCenterX = SCREEN_WIDTH / 2;
-    const screenCenterY = SCREEN_HEIGHT / 2;
-    const thumbnailCenterX = initialPosition.x + initialPosition.width / 2;
-    const thumbnailCenterY = initialPosition.y + initialPosition.height / 2;
-
-    const initialTranslateX = thumbnailCenterX - screenCenterX;
-    const initialTranslateY = thumbnailCenterY - screenCenterY;
-
-    const scale = initialScale + (1 - initialScale) * animation.value;
-    const translateX = initialTranslateX * (1 - animation.value);
-    const translateY = initialTranslateY * (1 - animation.value);
-
-    return {
-      position: 'absolute',
-      width: finalWidth,
-      height: finalHeight,
-      transform: [{ translateX: translateX }, { translateY: translateY }, { scale: scale }],
-    };
-  });
-
   return (
-    <GestureDetector gesture={gesture}>
-      <Animated.ScrollView
-        ref={scrollViewRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
-        pinchGestureEnabled
-        maximumZoomScale={3}
-        minimumZoomScale={1}
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        bounces={scaled}
-        centerContent
-      >
-        <Animated.View style={styles.imageContainer}>
-          <Animated.View
-            style={[
-              styles.image,
-              animatedStyle,
-              isInitialImage && initialPosition ? interpolatedStyle : null,
-            ]}
-          >
-            <Image
-              style={{ flex: 1 }}
-              source={{ uri: image.uri }}
-              placeholder={{ uri: image.thumbnailUrl }}
-              contentFit="contain"
-              placeholderContentFit="contain"
-            />
-          </Animated.View>
-        </Animated.View>
-      </Animated.ScrollView>
-    </GestureDetector>
+    <ImageItem
+      {...rest}
+      openProgress={openProgress}
+      onRequestClose={onRequestClose}
+      transforms={transforms}
+      dismissGesture={dismissGesture}
+      onZoom={onZoom}
+      scaled={scaled}
+    />
   );
 };
 
@@ -305,36 +133,30 @@ const ImageView: React.FC<ImageViewProps> = ({
   initialPosition,
 }) => {
   const flatListRef = useRef<FlatList>(null);
-  const backgroundOpacity = useSharedValue(0);
+  const openProgress = useSharedValue(0);
   const isClosed = useSharedValue(false);
   const [showCloseButton, setShowCloseButton] = useState(true);
   const showCloseButtonAnim = useSharedValue(1);
   const { top } = useSafeAreaInsets();
 
-  const toggleCloseButton = () => {
-    'worklet';
+  const toggleCloseButton = useCallback(() => {
     showCloseButtonAnim.value = withTiming(!showCloseButton ? 1 : 0, {
       duration: 200,
       easing: Easing.ease,
     });
     runOnJS(setShowCloseButton)(!showCloseButton);
-  };
+  }, [showCloseButton]);
 
   useAnimatedReaction(
-    () => backgroundOpacity.value,
+    () => openProgress.value,
     (opacity) => {
       showCloseButtonAnim.value = opacity;
     },
-    [backgroundOpacity],
+    [openProgress],
   );
 
-  const singleTap = Gesture.Tap().onEnd(() => {
-    'worklet';
-    toggleCloseButton();
-  });
-
   const backgroundStyle = useAnimatedStyle(() => ({
-    backgroundColor: `rgba(0, 0, 0, ${backgroundOpacity.value})`,
+    backgroundColor: `rgba(0, 0, 0, ${openProgress.value})`,
     position: 'absolute',
     top: 0,
     left: 0,
@@ -353,15 +175,15 @@ const ImageView: React.FC<ImageViewProps> = ({
     };
   });
 
-  const renderItem: ListRenderItem<ImageItemProps> = ({ item, index }) => (
-    <ImageItem
+  const renderItem: ListRenderItem<ImageSource> = ({ item, index }) => (
+    <ImageViewItem
       image={item}
       onRequestClose={onRequestClose}
       initialPosition={initialPosition}
       isInitialImage={index === initialIndex}
-      backgroundOpacity={backgroundOpacity}
+      openProgress={openProgress}
       isClosed={isClosed}
-      singleTap={singleTap}
+      onTap={toggleCloseButton}
     />
   );
 
@@ -418,24 +240,6 @@ const ImageView: React.FC<ImageViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  imageContainer: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  image: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
   },
   closeButton: {
     position: 'absolute',

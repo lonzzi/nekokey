@@ -7,7 +7,7 @@ import { zhCN } from 'date-fns/locale';
 import { Image as HighPriorityImage } from 'expo-image';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, useColorScheme, View } from 'react-native';
 
 import ImageLayoutGrid from './ImageView/ImageLayoutGrid';
 import { ThemedText } from './ThemedText';
@@ -24,6 +24,7 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
   const [likeCount, setLikeCount] = useState(note.reactions?.['👍'] || 0);
   const api = useMisskeyApi();
   const queryClient = useQueryClient();
+  const colorScheme = useColorScheme();
 
   useNoteUpdated({
     endpoint,
@@ -75,7 +76,7 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
       queryClient.invalidateQueries({ queryKey: [endpoint] });
     },
     onError: () => {
-      Alert.alert('���发失败', '请稍后重试');
+      Alert.alert('转发失败', '请稍后重试');
     },
   });
 
@@ -111,19 +112,20 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView
+      style={[styles.container, { borderBottomColor: colorScheme === 'dark' ? '#111' : '#eee' }]}
+    >
       <HighPriorityImage source={{ uri: note.user.avatarUrl || '' }} style={styles.avatar} />
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.userInfo}>
-            <View style={styles.nameContainer}>
-              <ThemedText type="defaultSemiBold" style={styles.name} numberOfLines={1}>
+            <ThemedText numberOfLines={1}>
+              <ThemedText type="defaultSemiBold" style={styles.name}>
                 {note.user.name}
               </ThemedText>
-              <ThemedText style={styles.username} numberOfLines={1}>
-                @{note.user.username}
-              </ThemedText>
-            </View>
+              {'  '}
+              <ThemedText style={styles.username}>@{note.user.username}</ThemedText>
+            </ThemedText>
           </View>
           <ThemedText style={styles.time}>
             {formatDistanceToNow(new Date(note.createdAt), { locale: zhCN, addSuffix: true })}
@@ -164,7 +166,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   avatar: {
     width: 48,
@@ -187,10 +188,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 8,
   },
-  nameContainer: {
-    flex: 1,
-    flexDirection: 'row',
-  },
   name: {
     fontSize: 14,
     marginRight: 4,
@@ -198,6 +195,7 @@ const styles = StyleSheet.create({
   username: {
     color: '#666',
     fontSize: 14,
+    flexShrink: 1,
   },
   time: {
     color: '#666',
