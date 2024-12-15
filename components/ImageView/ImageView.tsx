@@ -8,12 +8,19 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   StyleSheet,
-  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
   ViewToken,
 } from 'react-native';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+  TapGesture,
+} from 'react-native-gesture-handler';
 import Animated, {
   Easing,
+  interpolate,
   runOnJS,
   SharedValue,
   useAnimatedReaction,
@@ -23,6 +30,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ImageItemProps } from './ImageLayoutGrid';
 
@@ -55,7 +63,16 @@ const ImageItem: React.FC<{
   isInitialImage: boolean;
   backgroundOpacity: SharedValue<number>;
   isClosed: SharedValue<boolean>;
-}> = ({ image, onRequestClose, initialPosition, isInitialImage, backgroundOpacity, isClosed }) => {
+  singleTap: TapGesture;
+}> = ({
+  image,
+  onRequestClose,
+  initialPosition,
+  isInitialImage,
+  backgroundOpacity,
+  isClosed,
+  singleTap,
+}) => {
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -109,13 +126,6 @@ const ImageItem: React.FC<{
       animated: true,
     });
   };
-
-  const singleTap = Gesture.Tap().onEnd(() => {
-    'worklet';
-    // if (onRequestClose) {
-    //   runOnJS(onRequestClose)();
-    // }
-  });
 
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
@@ -294,11 +304,34 @@ const ImageView: React.FC<ImageViewProps> = ({
   onRequestClose,
   initialPosition,
 }) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const flatListRef = useRef<FlatList>(null);
   const backgroundOpacity = useSharedValue(0);
   const isClosed = useSharedValue(false);
+  const [showCloseButton, setShowCloseButton] = useState(true);
+  const showCloseButtonAnim = useSharedValue(1);
+  const { top } = useSafeAreaInsets();
+
+  const toggleCloseButton = () => {
+    'worklet';
+    showCloseButtonAnim.value = withTiming(!showCloseButton ? 1 : 0, {
+      duration: 200,
+      easing: Easing.ease,
+    });
+    runOnJS(setShowCloseButton)(!showCloseButton);
+  };
+
+  useAnimatedReaction(
+    () => backgroundOpacity.value,
+    (opacity) => {
+      showCloseButtonAnim.value = opacity;
+    },
+    [backgroundOpacity],
+  );
+
+  const singleTap = Gesture.Tap().onEnd(() => {
+    'worklet';
+    toggleCloseButton();
+  });
 
   const backgroundStyle = useAnimatedStyle(() => ({
     backgroundColor: `rgba(0, 0, 0, ${backgroundOpacity.value})`,
@@ -309,6 +342,17 @@ const ImageView: React.FC<ImageViewProps> = ({
     bottom: 0,
   }));
 
+  const closeButtonStyle = useAnimatedStyle(() => {
+    return {
+      opacity: showCloseButtonAnim.value,
+      transform: [
+        {
+          translateY: interpolate(showCloseButtonAnim.value, [0, 1], [-20, 0]),
+        },
+      ],
+    };
+  });
+
   const renderItem: ListRenderItem<ImageItemProps> = ({ item, index }) => (
     <ImageItem
       image={item}
@@ -317,6 +361,7 @@ const ImageView: React.FC<ImageViewProps> = ({
       isInitialImage={index === initialIndex}
       backgroundOpacity={backgroundOpacity}
       isClosed={isClosed}
+      singleTap={singleTap}
     />
   );
 
@@ -324,7 +369,6 @@ const ImageView: React.FC<ImageViewProps> = ({
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0) {
         const newIndex = viewableItems[0].index ?? 0;
-        setCurrentIndex(newIndex);
         onIndexChange?.(newIndex);
       }
     },
@@ -338,14 +382,19 @@ const ImageView: React.FC<ImageViewProps> = ({
   return (
     <GestureHandlerRootView style={styles.container}>
       <Animated.View style={backgroundStyle} />
-      <TouchableOpacity
-        style={styles.closeButton}
-        onPress={() => {
-          isClosed.value = true;
-        }}
-      >
-        <Ionicons name="close" size={24} color="white" />
-      </TouchableOpacity>
+      <Animated.View style={[styles.closeButton, closeButtonStyle, { top: top + 20 }]}>
+        <TouchableWithoutFeedback
+          onPress={() => {
+            'worklet';
+            isClosed.value = true;
+            toggleCloseButton();
+          }}
+        >
+          <View>
+            <Ionicons name="close" size={24} color="white" />
+          </View>
+        </TouchableWithoutFeedback>
+      </Animated.View>
       <FlatList
         ref={flatListRef}
         data={images}
@@ -390,7 +439,6 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 40,
     right: 20,
     zIndex: 10,
     padding: 8,
