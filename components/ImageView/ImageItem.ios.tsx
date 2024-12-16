@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import React from 'react';
-import { Dimensions, StyleSheet } from 'react-native';
+import { Dimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -10,36 +10,24 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
 } from 'react-native-reanimated';
 
 import { ImageItemProps } from './ImageItem';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const springOptions = {
-  mass: 1.25,
-  damping: 150,
-  stiffness: 900,
-  restDisplacementThreshold: 0.01,
-};
-
 const ImageItem: React.FC<ImageItemProps> = ({
   image,
-  onRequestClose,
-  initialPosition,
-  isInitialImage,
-  openProgress,
   isClosed,
   transforms,
   dismissGesture,
   scaled,
   onTap,
   onZoom,
+  imageAspect,
 }) => {
   const scrollViewRef = useAnimatedRef<Animated.ScrollView>();
   const isDragging = useSharedValue(false);
-  const animation = useSharedValue(0);
 
   const resetZoom = () => {
     const scrollResponder = scrollViewRef?.current?.getScrollResponder();
@@ -53,28 +41,10 @@ const ImageItem: React.FC<ImageItemProps> = ({
   };
 
   useAnimatedReaction(
-    () => isInitialImage,
-    (isInitial) => {
-      if (isInitial) {
-        animation.value = 0;
-        animation.value = withSpring(1, springOptions);
-        openProgress.value = withSpring(1, springOptions);
-      }
-    },
-    [isInitialImage],
-  );
-
-  useAnimatedReaction(
     () => isClosed.value,
     (closed) => {
       if (closed) {
         runOnJS(resetZoom)();
-        openProgress.value = withSpring(0, springOptions);
-        animation.value = withSpring(0, springOptions, () => {
-          if (onRequestClose) {
-            runOnJS(onRequestClose)();
-          }
-        });
       }
     },
     [isClosed],
@@ -149,61 +119,35 @@ const ImageItem: React.FC<ImageItemProps> = ({
 
   const gesture = Gesture.Exclusive(dismissGesture, doubleTap, singleTap);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const { scale, translateX, translateY, verticalTranslate } = transforms.value;
-    // console.log(scale, translateX, translateY, verticalTranslate);
-
+  const containerStyle = useAnimatedStyle(() => {
+    const { scaleAndMoveTransform, isHidden } = transforms.get();
     return {
-      transform: [{ translateX }, { translateY: translateY + verticalTranslate }, { scale }],
+      flex: 1,
+      transform: scaleAndMoveTransform,
+      opacity: isHidden ? 0 : 1,
     };
   });
 
-  const interpolatedStyle = useAnimatedStyle(() => {
-    if (!isInitialImage || !initialPosition) return {};
-
-    const imageAspect = SCREEN_WIDTH / SCREEN_HEIGHT;
-    const thumbAspect = initialPosition.width / initialPosition.height;
-
-    let uncroppedInitialWidth, uncroppedInitialHeight;
-    if (imageAspect > thumbAspect) {
-      uncroppedInitialWidth = initialPosition.height * imageAspect;
-      uncroppedInitialHeight = initialPosition.height;
-    } else {
-      uncroppedInitialWidth = initialPosition.width;
-      uncroppedInitialHeight = initialPosition.width / imageAspect;
-    }
-
-    let finalWidth, finalHeight;
-    if (imageAspect > thumbAspect) {
-      finalWidth = SCREEN_HEIGHT * imageAspect;
-      finalHeight = SCREEN_HEIGHT;
-    } else {
-      finalWidth = SCREEN_WIDTH;
-      finalHeight = SCREEN_WIDTH / imageAspect;
-    }
-
-    const initialScale = Math.min(
-      uncroppedInitialWidth / finalWidth,
-      uncroppedInitialHeight / finalHeight,
-    );
-
-    const screenCenterX = SCREEN_WIDTH / 2;
-    const screenCenterY = SCREEN_HEIGHT / 2;
-    const thumbnailCenterX = initialPosition.x + initialPosition.width / 2;
-    const thumbnailCenterY = initialPosition.y + initialPosition.height / 2;
-
-    const initialTranslateX = thumbnailCenterX - screenCenterX;
-    const initialTranslateY = thumbnailCenterY - screenCenterY;
-
-    const scale = initialScale + (1 - initialScale) * animation.value;
-    const translateX = initialTranslateX * (1 - animation.value);
-    const translateY = initialTranslateY * (1 - animation.value);
-
+  const imageCropStyle = useAnimatedStyle(() => {
+    const { cropFrameTransform } = transforms.get();
     return {
-      position: 'absolute',
-      width: finalWidth,
-      height: finalHeight,
-      transform: [{ translateX: translateX }, { translateY: translateY }, { scale: scale }],
+      overflow: 'hidden',
+      transform: cropFrameTransform,
+      width: SCREEN_WIDTH,
+      maxHeight: SCREEN_HEIGHT,
+      alignSelf: 'center',
+      aspectRatio: imageAspect ?? 1 /* force onLoad */,
+      opacity: imageAspect === undefined ? 0 : 1,
+    };
+  });
+
+  const imageStyle = useAnimatedStyle(() => {
+    const { cropContentTransform } = transforms.get();
+    return {
+      transform: cropContentTransform,
+      width: '100%',
+      aspectRatio: imageAspect ?? 1 /* force onLoad */,
+      opacity: imageAspect === undefined ? 0 : 1,
     };
   });
 
@@ -216,8 +160,7 @@ const ImageItem: React.FC<ImageItemProps> = ({
     <GestureDetector gesture={gesture}>
       <Animated.ScrollView
         ref={scrollViewRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
+        style={containerStyle}
         pinchGestureEnabled
         maximumZoomScale={3}
         minimumZoomScale={1}
@@ -228,14 +171,8 @@ const ImageItem: React.FC<ImageItemProps> = ({
         animatedProps={scrollViewProps}
         centerContent
       >
-        <Animated.View style={styles.imageContainer}>
-          <Animated.View
-            style={[
-              styles.image,
-              animatedStyle,
-              isInitialImage && initialPosition ? interpolatedStyle : null,
-            ]}
-          >
+        <Animated.View style={imageCropStyle}>
+          <Animated.View style={imageStyle}>
             <Image
               style={{ flex: 1 }}
               source={{ uri: image.uri }}
@@ -249,26 +186,5 @@ const ImageItem: React.FC<ImageItemProps> = ({
     </GestureDetector>
   );
 };
-
-const styles = StyleSheet.create({
-  imageContainer: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  image: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-  },
-});
 
 export default ImageItem;
