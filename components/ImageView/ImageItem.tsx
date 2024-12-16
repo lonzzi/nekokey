@@ -7,11 +7,14 @@ import { ImageViewItemProps } from './ImageView';
 
 export type Transform = Exclude<TransformsStyle['transform'], string | undefined>;
 
+export type Rect = { x: number; y: number; width: number; height: number };
+
 export interface ImageSource {
   uri: string;
   thumbnailUrl?: string | null;
   width?: number;
   height?: number;
+  thumbRect?: Rect;
 }
 
 export type ImageItemProps = ImageViewItemProps & {

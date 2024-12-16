@@ -32,7 +32,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import ImageItem, { ImageSource, Transform } from './ImageItem';
+import ImageItem, { ImageSource, Rect, Transform } from './ImageItem';
 
 const PIXEL_RATIO = PixelRatio.get();
 
@@ -46,20 +46,12 @@ const springOptions = {
 export interface ImageViewProps {
   images: ImageSource[];
   initialIndex?: number;
-  onIndexChange?: (index: number) => void;
   onRequestClose?: () => void;
-  initialPosition?: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
 }
 
 export type ImageViewItemProps = {
   image: ImageSource;
   onRequestClose?: () => void;
-  initialPosition?: ImageViewProps['initialPosition'];
   isInitialImage: boolean;
   openProgress: SharedValue<number>;
   isClosed: SharedValue<boolean>;
@@ -67,6 +59,7 @@ export type ImageViewItemProps = {
   onZoom: (nextIsScaled: boolean) => void;
   verticalTranslate: SharedValue<number>;
   scaled: boolean;
+  currentIndex: number;
 };
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -74,7 +67,6 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const ImageViewItem: React.FC<ImageViewItemProps> = ({
   onRequestClose,
   openProgress,
-  initialPosition,
   image,
   verticalTranslate,
   scaled,
@@ -94,10 +86,10 @@ const ImageViewItem: React.FC<ImageViewItemProps> = ({
       };
     }
 
-    if (image.width && image.height && initialPosition && openProgress.value < 1) {
+    if (image.width && image.height && image.thumbRect && openProgress.value < 1) {
       return interpolateTransform(
         openProgress.value,
-        initialPosition,
+        image.thumbRect,
         {
           x: 0,
           y: 0,
@@ -167,13 +159,7 @@ const ImageViewItem: React.FC<ImageViewItemProps> = ({
   );
 };
 
-const ImageView: React.FC<ImageViewProps> = ({
-  images,
-  initialIndex = 0,
-  onIndexChange,
-  onRequestClose,
-  initialPosition,
-}) => {
+const ImageView: React.FC<ImageViewProps> = ({ images, initialIndex = 0, onRequestClose }) => {
   const flatListRef = useRef<FlatList>(null);
   const openProgress = useSharedValue(0);
   const verticalTranslate = useSharedValue(0);
@@ -182,6 +168,11 @@ const ImageView: React.FC<ImageViewProps> = ({
   const showCloseButton = useSharedValue(true);
   const { top } = useSafeAreaInsets();
   const [scaled, setScaled] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+
+  const onIndexChange = useCallback((index: number) => {
+    setCurrentIndex(index);
+  }, []);
 
   const toggleCloseButton = useCallback(() => {
     showCloseButton.value = !showCloseButton.value;
@@ -256,7 +247,7 @@ const ImageView: React.FC<ImageViewProps> = ({
     <ImageViewItem
       image={item}
       onRequestClose={onRequestClose}
-      initialPosition={initialPosition}
+      currentIndex={currentIndex}
       isInitialImage={index === initialIndex}
       openProgress={openProgress}
       isClosed={isClosed}
@@ -339,13 +330,8 @@ function interpolatePx(px: number, inputRange: readonly number[], outputRange: r
 
 function interpolateTransform(
   progress: number,
-  thumbnailDims: {
-    x: number;
-    width: number;
-    y: number;
-    height: number;
-  },
-  safeArea: { width: number; height: number; x: number; y: number },
+  thumbnailDims: Rect,
+  safeArea: Rect,
   imageAspect: number,
 ): {
   scaleAndMoveTransform: Transform;

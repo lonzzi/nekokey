@@ -12,7 +12,7 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 
-import { ImageItemProps } from './ImageItem';
+import { ImageItemProps, Rect } from './ImageItem';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -72,7 +72,7 @@ const ImageItem: React.FC<ImageItemProps> = ({
     },
   });
 
-  const zoomTo = (rect: { x: number; y: number; width: number; height: number }) => {
+  const zoomTo = (rect: Rect) => {
     const scrollResponder = scrollViewRef?.current?.getScrollResponder();
     scrollResponder?.scrollResponderZoomTo({
       x: rect.x,

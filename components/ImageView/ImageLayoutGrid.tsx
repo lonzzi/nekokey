@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Modal, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 
-import { ImageSource } from './ImageItem';
+import { ImageSource, Rect } from './ImageItem';
 import ImageView from './ImageView';
 
 interface ImagePreviewProps {
@@ -15,15 +15,28 @@ interface ImagePreviewProps {
 const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedImagePosition, setSelectedImagePosition] = useState({
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-  });
   const imageCount = images.length;
+  const [imagePositions, setImagePositions] = useState<Array<Rect>>([]);
   const [containerWidth, setContainerWidth] = useState(0);
   const [imageAspectRatio, setImageAspectRatio] = useState(0);
+
+  // 存储所有图片的 ref
+  const imageRefs = useRef<Array<View | null>>([]);
+
+  // 计算所有图片位置的函数
+  const measureAllImages = () => {
+    imageRefs.current.forEach((ref, index) => {
+      if (ref) {
+        ref.measure((x, y, width, height, pageX, pageY) => {
+          setImagePositions((prev) => {
+            const newPositions = [...prev];
+            newPositions[index] = { x: pageX, y: pageY, width, height };
+            return newPositions;
+          });
+        });
+      }
+    });
+  };
 
   const getImageStyle = (index: number) => {
     switch (imageCount) {
@@ -72,6 +85,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
           return (
             <View
               key={index}
+              ref={(ref) => (imageRefs.current[index] = ref)}
               style={[
                 containerStyle,
                 isTripleLayout &&
@@ -84,14 +98,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
               ]}
             >
               <TouchableWithoutFeedback
-                onPress={(event) => {
-                  'worklet';
-                  const { target } = event;
-                  target.measure((x, y, width, height, pageX, pageY) => {
-                    setSelectedImagePosition({ x: pageX, y: pageY, width, height });
-                    setSelectedIndex(index);
-                    setModalVisible(true);
-                  });
+                onPress={() => {
+                  setSelectedIndex(index);
+                  setModalVisible(true);
+                  measureAllImages();
                 }}
               >
                 <Image
@@ -109,10 +119,12 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
 
       <Modal visible={modalVisible} transparent animationType="none" statusBarTranslucent>
         <ImageView
-          images={images.map((image) => image)}
+          images={images.map((image) => ({
+            ...image,
+            thumbRect: imagePositions[images.indexOf(image)],
+          }))}
           initialIndex={selectedIndex}
           onRequestClose={() => setModalVisible(false)}
-          initialPosition={selectedImagePosition}
         />
       </Modal>
     </View>
