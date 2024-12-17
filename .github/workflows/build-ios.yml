@@ -1,0 +1,48 @@
+name: iOS Simulator Build
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install -g expo-cli
+
+      - name: Run Expo Prebuild
+        run: |
+          expo prebuild
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild -workspace ios/nekokey.xcworkspace \
+            -scheme nekokey \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath build
+
+      - name: Upload App Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-app
+          path: build/Build/Products/Debug-iphonesimulator/nekokey.app
