@@ -39,3 +39,7 @@ app-example
 
 # idea
 .idea
+
+# Android & iOS
+android/
+ios/
