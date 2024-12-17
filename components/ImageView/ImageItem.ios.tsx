@@ -25,6 +25,7 @@ const ImageItem: React.FC<ImageItemProps> = ({
   onTap,
   onZoom,
   imageAspect,
+  onLongPress,
 }) => {
   const scrollViewRef = useAnimatedRef<Animated.ScrollView>();
   const isDragging = useSharedValue(false);
@@ -90,6 +91,15 @@ const ImageItem: React.FC<ImageItemProps> = ({
     }
   });
 
+  const longPress = Gesture.LongPress()
+    .minDuration(500)
+    .onStart(() => {
+      'worklet';
+      if (onLongPress) {
+        runOnJS(onLongPress)();
+      }
+    });
+
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
     .onEnd((e) => {
@@ -117,7 +127,8 @@ const ImageItem: React.FC<ImageItemProps> = ({
       runOnJS(zoomTo)(zoomRect);
     });
 
-  const gesture = Gesture.Exclusive(dismissGesture, doubleTap, singleTap);
+  const tapGestures = Gesture.Exclusive(doubleTap, singleTap);
+  const gesture = Gesture.Simultaneous(dismissGesture, Gesture.Race(tapGestures, longPress));
 
   const containerStyle = useAnimatedStyle(() => {
     const { scaleAndMoveTransform, isHidden } = transforms.get();

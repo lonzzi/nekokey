@@ -3,6 +3,8 @@
  * https://github.com/bluesky-social/social-app/tree/main/src/view/com/lightbox/ImageViewing
  */
 
+import { isIOS } from '@/lib/utils/platform';
+import { openImageShareModal } from '@/lib/utils/share';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -36,8 +38,15 @@ import ImageItem, { ImageSource, Rect, Transform } from './ImageItem';
 
 const PIXEL_RATIO = PixelRatio.get();
 
-const springOptions = {
-  mass: 1.25,
+const SLOW_SPRING: WithSpringConfig = {
+  mass: isIOS ? 1.25 : 0.75,
+  damping: 300,
+  stiffness: 800,
+  restDisplacementThreshold: 0.01,
+};
+
+const FAST_SPRING: WithSpringConfig = {
+  mass: isIOS ? 1.25 : 0.75,
   damping: 150,
   stiffness: 900,
   restDisplacementThreshold: 0.01,
@@ -143,6 +152,10 @@ const ImageViewItem: React.FC<ImageViewItemProps> = ({
       }
     });
 
+  const onLongPress = useCallback(async () => {
+    openImageShareModal(image.uri);
+  }, [image.uri]);
+
   return (
     <ImageItem
       {...rest}
@@ -155,6 +168,7 @@ const ImageViewItem: React.FC<ImageViewItemProps> = ({
       scaled={scaled}
       imageAspect={(image.width ?? 1) / (image.height ?? 1)}
       verticalTranslate={verticalTranslate}
+      onLongPress={onLongPress}
     />
   );
 };
@@ -175,11 +189,9 @@ const ImageView: React.FC<ImageViewProps> = ({ images, initialIndex = 0, onReque
   }, []);
 
   const toggleCloseButton = useCallback(() => {
-    showCloseButton.value = !showCloseButton.value;
-    showCloseButtonAnim.value = withTiming(showCloseButton.value ? 1 : 0, {
-      duration: 200,
-      easing: Easing.ease,
-    });
+    const show = !showCloseButton.value;
+    showCloseButton.value = show;
+    showCloseButtonAnim.value = withClampedSpring(show ? 1 : 0, FAST_SPRING);
   }, [onRequestClose]);
 
   useAnimatedReaction(
@@ -195,7 +207,7 @@ const ImageView: React.FC<ImageViewProps> = ({ images, initialIndex = 0, onReque
     (closed) => {
       if (closed) {
         openProgress.set(() =>
-          withClampedSpring(0, springOptions, () => {
+          withClampedSpring(0, SLOW_SPRING, () => {
             if (onRequestClose) {
               runOnJS(onRequestClose)();
             }
@@ -209,7 +221,7 @@ const ImageView: React.FC<ImageViewProps> = ({ images, initialIndex = 0, onReque
   useEffect(() => {
     // https://github.com/software-mansion/react-native-reanimated/issues/6677
     rAF_FIXED(() => {
-      openProgress.set(() => withClampedSpring(1, springOptions));
+      openProgress.set(() => withClampedSpring(1, SLOW_SPRING));
     });
   }, [openProgress]);
 

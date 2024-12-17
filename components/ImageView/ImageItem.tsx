@@ -28,6 +28,7 @@ export type ImageItemProps = ImageViewItemProps & {
   dismissGesture: Gesture;
   scaled: boolean;
   imageAspect: number;
+  onLongPress?: () => void;
 };
 
 const ImageItem: React.FC<ImageItemProps> = () => {
