@@ -1,4 +1,4 @@
-name: iOS Simulator Build
+name: Build iOS ipa
 
 on:
   push:
@@ -17,32 +17,43 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
+
+      - name: Get commit info
+        id: commitinfo
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         run: |
           npm install
-          npm install -g expo-cli
 
       - name: Run Expo Prebuild
         run: |
-          expo prebuild
+          npx expo prebuild --platform ios --no-install
 
       - name: Install CocoaPods
         run: |
           cd ios
           pod install
 
-      - name: Build for iOS Simulator
+      - name: Build Unsigned Archive
         run: |
           xcodebuild -workspace ios/nekokey.xcworkspace \
             -scheme nekokey \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -derivedDataPath build
+            -configuration Release \
+            -archivePath ${{ github.workspace }}/build/nekokey.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean archive
+
+      - name: Package ipa
+        run: |
+          mkdir Payload
+          cp -r ${{ github.workspace }}/build/nekokey.xcarchive/Products/Applications/nekokey.app Payload
+          zip -r nekokey-iOS_nightly-${{ steps.commitinfo.outputs.sha_short }}.ipa Payload
 
       - name: Upload App Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-simulator-app
-          path: build/Build/Products/Debug-iphonesimulator/nekokey.app
+          name: ios-nightly-build
+          path: nekokey-iOS_nightly-${{ steps.commitinfo.outputs.sha_short }}.ipa
