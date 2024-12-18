@@ -2,8 +2,8 @@ name: Build iOS ipa
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -18,10 +18,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Get commit info
-        id: commitinfo
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         run: |
@@ -50,10 +46,10 @@ jobs:
         run: |
           mkdir Payload
           cp -r ${{ github.workspace }}/build/nekokey.xcarchive/Products/Applications/nekokey.app Payload
-          zip -r nekokey-iOS_nightly-${{ steps.commitinfo.outputs.sha_short }}.ipa Payload
+          zip -r nekokey-iOS_${{ github.ref_name }}.ipa Payload
 
       - name: Upload App Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-nightly-build
-          path: nekokey-iOS_nightly-${{ steps.commitinfo.outputs.sha_short }}.ipa
+          name: ios-release-${{ github.ref_name }}
+          path: nekokey-iOS_${{ github.ref_name }}.ipa
