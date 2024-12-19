@@ -4,6 +4,7 @@ import useRefresh from '@/hooks/useRefresh';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
 import { useMisskeyStream } from '@/lib/api';
 import { useScrollHandlers } from '@/lib/contexts/ScrollContext';
+import { isIOS } from '@/lib/utils/platform';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useScrollToTop } from '@react-navigation/native';
@@ -126,11 +127,16 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
     useEffect(() => {
       const channel = stream.useChannel(TIMELINE_CHANNEL_MAP[endpoint] as 'homeTimeline');
 
-      channel.on('note', (note) => {
+      channel.on('note', async (note) => {
         if (scrollOffset.value > 0) {
           setShowScrollTop(true);
           setNewNoteIds((prev) => new Set(prev).add(note.id));
         }
+
+        if (query.isFetching) {
+          await query.refetch();
+        }
+
         queryClient.setQueryData([endpoint], (oldData: InfiniteData<NoteType[]>) => {
           if (!oldData) return { pages: [[note]], pageParams: [undefined] };
           return {
@@ -143,7 +149,7 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
       return () => {
         channel.dispose();
       };
-    }, [stream, queryClient]);
+    }, [stream, queryClient, query]);
 
     if (query.isLoading) {
       return (
@@ -186,12 +192,16 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
               query.fetchNextPage();
             }
           }}
-          onEndReachedThreshold={1}
+          onEndReachedThreshold={2}
           // Keep the offset when getting channel updates
           maintainVisibleContentPosition={{
             minIndexForVisible: 0,
           }}
+          maxToRenderPerBatch={isIOS ? 5 : 1}
+          windowSize={9}
+          updateCellsBatchingPeriod={40}
           removeClippedSubviews={true}
+          initialNumToRender={10}
           ListFooterComponent={() =>
             query.hasNextPage ? (
               <ThemedView style={styles.footerContainer}>
