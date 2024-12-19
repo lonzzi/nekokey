@@ -5,19 +5,10 @@
 
 import { isIOS } from '@/lib/utils/platform';
 import { openImageShareModal } from '@/lib/utils/share';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Dimensions,
-  FlatList,
-  ListRenderItem,
-  PixelRatio,
-  StyleSheet,
-  TouchableWithoutFeedback,
-  View,
-  ViewToken,
-} from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Dimensions, PixelRatio, StyleSheet, View } from 'react-native';
 import { Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
+import PagerView from 'react-native-pager-view';
 import Animated, {
   AnimationCallback,
   Easing,
@@ -32,9 +23,9 @@ import Animated, {
   WithSpringConfig,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ImageItem, { ImageSource, Rect, Transform } from './ImageItem';
+import { ImageViewHeader } from './ImageViewControls';
 
 const PIXEL_RATIO = PixelRatio.get();
 
@@ -42,13 +33,6 @@ const SLOW_SPRING: WithSpringConfig = {
   mass: isIOS ? 1.25 : 0.75,
   damping: 300,
   stiffness: 800,
-  restDisplacementThreshold: 0.01,
-};
-
-const FAST_SPRING: WithSpringConfig = {
-  mass: isIOS ? 1.25 : 0.75,
-  damping: 150,
-  stiffness: 900,
   restDisplacementThreshold: 0.01,
 };
 
@@ -174,13 +158,11 @@ const ImageViewItem: React.FC<ImageViewItemProps> = ({
 };
 
 const ImageView: React.FC<ImageViewProps> = ({ images, initialIndex = 0, onRequestClose }) => {
-  const flatListRef = useRef<FlatList>(null);
   const openProgress = useSharedValue(0);
   const verticalTranslate = useSharedValue(0);
   const isClosed = useSharedValue(false);
-  const showCloseButtonAnim = useSharedValue(1);
-  const showCloseButton = useSharedValue(true);
-  const { top } = useSafeAreaInsets();
+  const showControlAnim = useSharedValue(1);
+  const showControl = useSharedValue(true);
   const [scaled, setScaled] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
@@ -189,15 +171,13 @@ const ImageView: React.FC<ImageViewProps> = ({ images, initialIndex = 0, onReque
   }, []);
 
   const toggleCloseButton = useCallback(() => {
-    const show = !showCloseButton.value;
-    showCloseButton.value = show;
-    showCloseButtonAnim.value = withClampedSpring(show ? 1 : 0, FAST_SPRING);
-  }, [onRequestClose]);
+    showControl.value = !showControl.value;
+  }, []);
 
   useAnimatedReaction(
     () => openProgress.value,
     (opacity) => {
-      showCloseButtonAnim.value = opacity;
+      showControlAnim.value = opacity;
     },
     [openProgress],
   );
@@ -240,82 +220,51 @@ const ImageView: React.FC<ImageViewProps> = ({ images, initialIndex = 0, onReque
     };
   });
 
-  const closeButtonStyle = useAnimatedStyle(() => {
-    return {
-      opacity: showCloseButtonAnim.value,
-      transform: [
-        {
-          translateY: interpolate(showCloseButtonAnim.value, [0, 1], [-20, 0]),
-        },
-      ],
-    };
-  });
-
   const onZoom = useCallback((nextIsScaled: boolean) => {
     setScaled(nextIsScaled);
   }, []);
 
-  const renderItem: ListRenderItem<ImageSource> = ({ item, index }) => (
-    <ImageViewItem
-      image={item}
-      onRequestClose={onRequestClose}
-      currentIndex={currentIndex}
-      isInitialImage={index === initialIndex}
-      openProgress={openProgress}
-      isClosed={isClosed}
-      onTap={toggleCloseButton}
-      onZoom={onZoom}
-      verticalTranslate={verticalTranslate}
-      scaled={scaled}
-    />
-  );
-
-  const onViewableItemsChanged = React.useCallback(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0) {
-        const newIndex = viewableItems[0].index ?? 0;
-        onIndexChange?.(newIndex);
-      }
-    },
-    [onIndexChange],
-  );
-
-  const viewabilityConfig = {
-    itemVisiblePercentThreshold: 50,
-  };
-
   return (
     <GestureHandlerRootView style={styles.container}>
       <Animated.View style={[backdropStyle, StyleSheet.absoluteFill]} className="bg-black" />
-      <Animated.View style={[styles.closeButton, closeButtonStyle, { top: top + 20 }]}>
-        <TouchableWithoutFeedback
-          onPress={() => {
-            'worklet';
-            isClosed.value = true;
-          }}
-        >
-          <View>
-            <Ionicons name="close" size={24} color="white" />
-          </View>
-        </TouchableWithoutFeedback>
-      </Animated.View>
-      <FlatList
-        ref={flatListRef}
-        data={images}
-        renderItem={renderItem}
-        horizontal
-        pagingEnabled
-        scrollEnabled={!scaled}
-        showsHorizontalScrollIndicator={false}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        initialScrollIndex={initialIndex}
-        getItemLayout={(_, index) => ({
-          length: SCREEN_WIDTH,
-          offset: SCREEN_WIDTH * index,
-          index,
-        })}
+      <ImageViewHeader
+        showControl={showControl}
+        onClose={() => {
+          'worklet';
+          isClosed.value = true;
+          showControl.value = false;
+        }}
+        onShare={() => {
+          openImageShareModal(images[currentIndex].uri);
+        }}
       />
+      <PagerView
+        style={styles.container}
+        initialPage={initialIndex}
+        onPageSelected={(e) => {
+          onIndexChange(e.nativeEvent.position);
+          setScaled(false);
+        }}
+        scrollEnabled={!scaled}
+        overdrag={true}
+      >
+        {images.map((item, index) => (
+          <View key={index}>
+            <ImageViewItem
+              image={item}
+              onRequestClose={onRequestClose}
+              currentIndex={currentIndex}
+              isInitialImage={index === initialIndex}
+              openProgress={openProgress}
+              isClosed={isClosed}
+              onTap={toggleCloseButton}
+              onZoom={onZoom}
+              verticalTranslate={verticalTranslate}
+              scaled={scaled}
+            />
+          </View>
+        ))}
+      </PagerView>
     </GestureHandlerRootView>
   );
 };
@@ -323,14 +272,6 @@ const ImageView: React.FC<ImageViewProps> = ({ images, initialIndex = 0, onReque
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  closeButton: {
-    position: 'absolute',
-    right: 20,
-    zIndex: 10,
-    padding: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 20,
   },
 });
 
