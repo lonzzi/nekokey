@@ -40,10 +40,6 @@ function TopTabBar({
   const headerTransform = useHeaderTransform();
 
   const inputRange = state.routes.map((_, i) => i);
-  const translateX = position.interpolate({
-    inputRange,
-    outputRange: inputRange.map((i) => i * TAB_WIDTH),
-  });
 
   return (
     <Animated.View
@@ -136,10 +132,13 @@ function TopTabBar({
                   style={[
                     styles.tabText,
                     {
-                      opacity: position.interpolate({
-                        inputRange,
-                        outputRange: inputRange.map((i) => (i === index ? 1 : 0.3)),
-                      }),
+                      opacity:
+                        inputRange.length >= 2
+                          ? position.interpolate({
+                              inputRange,
+                              outputRange: inputRange.map((i) => (i === index ? 1 : 0.3)),
+                            })
+                          : 1,
                       color: colors.text,
                       fontWeight: isFocused ? '600' : '400',
                     },
@@ -155,7 +154,24 @@ function TopTabBar({
         })}
       </View>
 
-      <RNAnimated.View style={[styles.containerIndicator, { transform: [{ translateX }] }]}>
+      <RNAnimated.View
+        style={[
+          styles.containerIndicator,
+          {
+            transform: [
+              {
+                translateX:
+                  inputRange.length >= 2
+                    ? position.interpolate({
+                        inputRange,
+                        outputRange: inputRange.map((i) => i * TAB_WIDTH),
+                      })
+                    : 0,
+              },
+            ],
+          },
+        ]}
+      >
         <View style={{ backgroundColor: colors.primary, height: 2, width: '60%' }} />
       </RNAnimated.View>
     </Animated.View>

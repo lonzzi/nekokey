@@ -64,8 +64,11 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
     const queryClient = useQueryClient();
     const listRef = useRef<FlatList>(null);
     const scrollOffset = useSharedValue(0);
-    const [showScrollTop, setShowScrollTop] = useState(false);
+    const [hasNew, setHasNew] = useState(false);
     const [newNoteIds, setNewNoteIds] = useState<Set<string>>(new Set());
+
+    const { data, refetch, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
+      query;
 
     const scrollHandler = useAnimatedScrollHandler({
       onBeginDrag,
@@ -73,7 +76,7 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
         'worklet';
         scrollOffset.value = event.contentOffset.y;
         if (event.contentOffset.y <= 0) {
-          runOnJS(setShowScrollTop)(false);
+          runOnJS(setHasNew)(false);
         }
         onScroll(event);
       },
@@ -81,8 +84,16 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
       onMomentumEnd,
     });
 
+    const checkForNew = useCallback(() => {
+      if (isFetching || !hasNew) {
+        return;
+      }
+      refetch();
+    }, [refetch, isFetching, hasNew]);
+
     const scrollToTop = () => {
-      setShowScrollTop(false);
+      setHasNew(false);
+      checkForNew();
       listRef.current?.scrollToOffset({ offset: -topTabBarHeight, animated: true });
     };
 
@@ -97,7 +108,7 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
         const next = new Set(prev);
         next.delete(noteId);
         if (next.size === 0) {
-          setShowScrollTop(false);
+          setHasNew(false);
         }
         return next;
       });
@@ -129,12 +140,7 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
 
       channel.on('note', async (note) => {
         if (scrollOffset.value > 0) {
-          setShowScrollTop(true);
-          setNewNoteIds((prev) => new Set(prev).add(note.id));
-        }
-
-        if (query.isFetching) {
-          await query.refetch();
+          setHasNew(true);
         }
 
         queryClient.setQueryData([endpoint], (oldData: InfiniteData<NoteType[]>) => {
@@ -151,7 +157,7 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
       };
     }, [stream, queryClient, query]);
 
-    if (query.isLoading) {
+    if (isLoading) {
       return (
         <ThemedView style={styles.loadingContainer}>
           <ActivityIndicator size="large" />
@@ -163,7 +169,7 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
       <>
         <Animated.FlatList
           ref={listRef}
-          data={query.data}
+          data={data}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           refreshControl={
@@ -186,24 +192,20 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
             },
           ]}
           onScroll={scrollHandler}
-          scrollEventThrottle={16}
+          scrollEventThrottle={1}
           onEndReached={() => {
-            if (query.hasNextPage) {
-              query.fetchNextPage();
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
             }
           }}
           onEndReachedThreshold={2}
-          // Keep the offset when getting channel updates
-          maintainVisibleContentPosition={{
-            minIndexForVisible: 0,
-          }}
           maxToRenderPerBatch={isIOS ? 5 : 1}
           windowSize={9}
           updateCellsBatchingPeriod={40}
           removeClippedSubviews={true}
           initialNumToRender={10}
           ListFooterComponent={() =>
-            query.hasNextPage ? (
+            hasNextPage ? (
               <ThemedView style={styles.footerContainer}>
                 <ActivityIndicator size="small" />
               </ThemedView>
@@ -212,7 +214,7 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
           viewabilityConfig={viewabilityConfig}
           onViewableItemsChanged={onViewableItemsChanged}
         />
-        {showScrollTop && (
+        {hasNew && (
           <TouchableOpacity
             style={[
               styles.scrollTopButton,
@@ -240,9 +242,14 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
 );
 TimelineList.displayName = 'TimelineList';
 
-export const HomeTimeline = () => <TimelineList endpoint="notes/timeline" />;
-export const GlobalTimeline = () => <TimelineList endpoint="notes/global-timeline" />;
-export const LocalTimeline = () => <TimelineList endpoint="notes/local-timeline" />;
+export const HomeTimeline = memo(() => <TimelineList endpoint="notes/timeline" />);
+HomeTimeline.displayName = 'HomeTimeline';
+
+export const GlobalTimeline = memo(() => <TimelineList endpoint="notes/global-timeline" />);
+GlobalTimeline.displayName = 'GlobalTimeline';
+
+export const LocalTimeline = memo(() => <TimelineList endpoint="notes/local-timeline" />);
+LocalTimeline.displayName = 'LocalTimeline';
 
 const styles = StyleSheet.create({
   container: {

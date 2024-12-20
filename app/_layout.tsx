@@ -31,6 +31,9 @@ const queryClient = new QueryClient({
     queries: {
       gcTime: 1000 * 60 * 60 * 24, // 24小时
       staleTime: 1000 * 60 * 5, // 5分钟
+      refetchOnWindowFocus: false,
+      structuralSharing: false,
+      retry: false,
     },
   },
 });
