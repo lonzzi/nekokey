@@ -4,6 +4,7 @@
     "slug": "nekokey",
     "scheme": "nekokey",
     "version": "1.0.0",
+    "owner": "lonzzi",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
