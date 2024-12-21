@@ -64,6 +64,7 @@ const ImageViewItem: React.FC<ImageViewItemProps> = ({
   verticalTranslate,
   scaled,
   onZoom,
+  currentIndex,
   ...rest
 }) => {
   const scale = useSharedValue(1);
@@ -153,6 +154,7 @@ const ImageViewItem: React.FC<ImageViewItemProps> = ({
       imageAspect={(image.width ?? 1) / (image.height ?? 1)}
       verticalTranslate={verticalTranslate}
       onLongPress={onLongPress}
+      currentIndex={currentIndex}
     />
   );
 };

@@ -1,6 +1,14 @@
+import { isAndroid } from '@/lib/utils/platform';
 import { Image } from 'expo-image';
 import React, { useRef, useState } from 'react';
-import { Modal, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
+import {
+  Dimensions,
+  Modal,
+  StatusBar,
+  StyleSheet,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 
 import { ImageSource, Rect } from './ImageItem';
 import ImageView from './ImageView';
@@ -20,17 +28,25 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
   const [containerWidth, setContainerWidth] = useState(0);
   const [imageAspectRatio, setImageAspectRatio] = useState(0);
 
-  // 存储所有图片的 ref
   const imageRefs = useRef<Array<View | null>>([]);
 
-  // 计算所有图片位置的函数
   const measureAllImages = () => {
     imageRefs.current.forEach((ref, index) => {
       if (ref) {
         ref.measure((x, y, width, height, pageX, pageY) => {
+          const windowHeight = Dimensions.get('window').height;
+          const screenHeight = Dimensions.get('screen').height;
+          const statusBarHeight = StatusBar.currentHeight;
+          const navbarHeight = screenHeight - windowHeight - (statusBarHeight ?? 0);
+
           setImagePositions((prev) => {
             const newPositions = [...prev];
-            newPositions[index] = { x: pageX, y: pageY, width, height };
+            newPositions[index] = {
+              x: pageX,
+              y: isAndroid ? pageY - navbarHeight : pageY,
+              width,
+              height,
+            };
             return newPositions;
           });
         });
