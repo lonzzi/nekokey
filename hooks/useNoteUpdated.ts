@@ -8,8 +8,8 @@ type NoteUpdatedProps = {
   endpoint: string;
   note: NoteType;
   onDeleted?: () => void;
-  onReacted?: () => void;
-  onUnreacted?: () => void;
+  onReacted?: (reaction: string) => void;
+  onUnreacted?: (reaction: string) => void;
   onPollVoted?: () => void;
 };
 
@@ -46,16 +46,12 @@ export const useNoteUpdated = ({
         }
         case 'reacted': {
           const reaction = body.reaction;
-          if (reaction === '👍') {
-            onReacted?.();
-          }
+          onReacted?.(reaction);
           break;
         }
         case 'unreacted': {
           const reaction = body.reaction;
-          if (reaction === '👍') {
-            onUnreacted?.();
-          }
+          onUnreacted?.(reaction);
           break;
         }
         case 'pollVoted': {
@@ -73,5 +69,5 @@ export const useNoteUpdated = ({
       stream.send('un', { id: note.id });
       stream.off('noteUpdated', onStreamNoteUpdated);
     };
-  }, [stream]);
+  }, [stream, endpoint, note.id, onDeleted, onReacted, onUnreacted, onPollVoted, queryClient]);
 };

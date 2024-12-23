@@ -20,8 +20,8 @@ interface NoteProps {
 }
 
 export function Note({ note, onReply, endpoint }: NoteProps) {
-  const [isLiked, setIsLiked] = useState(!!note.myReaction);
-  const [likeCount, setLikeCount] = useState(note.reactions?.['👍'] || 0);
+  const [reactions, setReactions] = useState(note.reactions || {});
+  const [myReaction, setMyReaction] = useState(note.myReaction);
   const api = useMisskeyApi();
   const queryClient = useQueryClient();
   const colorScheme = useColorScheme();
@@ -29,32 +29,49 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
   useNoteUpdated({
     endpoint,
     note,
-    onReacted: () => {
-      setLikeCount((prev) => prev + 1);
-      setIsLiked(true);
+    onReacted: (reaction) => {
+      setReactions((prev) => ({
+        ...prev,
+        [reaction]: (prev[reaction] || 0) + 1,
+      }));
+      setMyReaction(reaction);
     },
-    onUnreacted: () => {
-      setLikeCount((prev) => prev - 1);
-      setIsLiked(false);
+    onUnreacted: (reaction) => {
+      setReactions((prev) => ({
+        ...prev,
+        [reaction]: Math.max((prev[reaction] || 0) - 1, 0),
+      }));
+      setMyReaction(null);
     },
   });
 
-  const likeMutation = useMutation({
-    mutationFn: async () => {
-      if (isLiked) {
+  const reactionMutation = useMutation({
+    mutationFn: async (reaction: string) => {
+      if (myReaction) {
         return api?.request('notes/reactions/delete', {
           noteId: note.id,
         });
       } else {
         return api?.request('notes/reactions/create', {
           noteId: note.id,
-          reaction: '👍',
+          reaction,
         });
       }
     },
-    onMutate: () => {
-      setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
-      setIsLiked(!isLiked);
+    onMutate: (reaction) => {
+      if (myReaction) {
+        setReactions((prev) => ({
+          ...prev,
+          [myReaction]: Math.max((prev[myReaction] || 0) - 1, 0),
+        }));
+        setMyReaction(null);
+      } else {
+        setReactions((prev) => ({
+          ...prev,
+          [reaction]: (prev[reaction] || 0) + 1,
+        }));
+        setMyReaction(reaction);
+      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: [endpoint] });
@@ -79,10 +96,6 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
       Alert.alert('转发失败', '请稍后重试');
     },
   });
-
-  const handleLike = () => {
-    likeMutation.mutate();
-  };
 
   const handleRenote = () => {
     renoteMutation.mutate();
@@ -111,6 +124,29 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
     return <ImageLayoutGrid images={images} />;
   };
 
+  const renderReactions = () => {
+    return (
+      <View style={styles.reactions}>
+        {Object.entries(reactions).map(
+          ([reaction, count]) =>
+            count > 0 && (
+              <Pressable
+                key={reaction}
+                style={[
+                  styles.reactionButton,
+                  myReaction === reaction && styles.reactionButtonActive,
+                ]}
+                onPress={() => reactionMutation.mutate(reaction)}
+              >
+                <ThemedText>{reaction}</ThemedText>
+                <ThemedText style={styles.reactionCount}>{count}</ThemedText>
+              </Pressable>
+            ),
+        )}
+      </View>
+    );
+  };
+
   return (
     <ThemedView
       style={[styles.container, { borderBottomColor: colorScheme === 'dark' ? '#111' : '#eee' }]}
@@ -136,6 +172,8 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
         {renderImages()}
         {renderRenote()}
 
+        <View style={styles.reactionsContainer}>{renderReactions()}</View>
+
         <View style={styles.actions}>
           <Pressable style={styles.actionButton} onPress={onReply}>
             <Ionicons name="chatbubble-outline" size={20} color="#666" />
@@ -145,15 +183,6 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
           <Pressable style={styles.actionButton} onPress={handleRenote}>
             <Ionicons name="repeat-outline" size={20} color="#666" />
             <ThemedText style={styles.actionText}>转发</ThemedText>
-          </Pressable>
-
-          <Pressable style={styles.actionButton} onPress={handleLike}>
-            <Ionicons
-              name={isLiked ? 'heart' : 'heart-outline'}
-              size={20}
-              color={isLiked ? '#ff4081' : '#666'}
-            />
-            {likeCount > 0 && <ThemedText style={styles.actionText}>{likeCount}</ThemedText>}
           </Pressable>
         </View>
       </View>
@@ -210,12 +239,15 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     marginTop: 8,
-    justifyContent: 'space-around',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#eee',
+    paddingTop: 8,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 8,
+    marginRight: 16,
   },
   actionText: {
     marginLeft: 4,
@@ -232,5 +264,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginBottom: 4,
+  },
+  reactionsContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  reactions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  reactionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+  },
+  reactionButtonActive: {
+    backgroundColor: '#e0e0e0',
+  },
+  reactionCount: {
+    marginLeft: 4,
+    fontSize: 12,
+    color: '#666',
   },
 });
