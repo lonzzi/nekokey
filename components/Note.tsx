@@ -7,7 +7,15 @@ import { zhCN } from 'date-fns/locale';
 import { Image as HighPriorityImage } from 'expo-image';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, useColorScheme, View } from 'react-native';
+import {
+  Alert,
+  Modal,
+  Pressable,
+  StyleSheet,
+  TouchableWithoutFeedback,
+  useColorScheme,
+  View,
+} from 'react-native';
 
 import ImageLayoutGrid from './ImageView/ImageLayoutGrid';
 import { ThemedText } from './ThemedText';
@@ -25,6 +33,7 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
   const api = useMisskeyApi();
   const queryClient = useQueryClient();
   const colorScheme = useColorScheme();
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
 
   useNoteUpdated({
     endpoint,
@@ -48,9 +57,15 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
   const reactionMutation = useMutation({
     mutationFn: async (reaction: string) => {
       if (myReaction) {
-        return api?.request('notes/reactions/delete', {
+        await api?.request('notes/reactions/delete', {
           noteId: note.id,
         });
+        if (reaction !== myReaction) {
+          await api?.request('notes/reactions/create', {
+            noteId: note.id,
+            reaction,
+          });
+        }
       } else {
         return api?.request('notes/reactions/create', {
           noteId: note.id,
@@ -64,7 +79,15 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
           ...prev,
           [myReaction]: Math.max((prev[myReaction] || 0) - 1, 0),
         }));
-        setMyReaction(null);
+        if (reaction !== myReaction) {
+          setReactions((prev) => ({
+            ...prev,
+            [reaction]: (prev[reaction] || 0) + 1,
+          }));
+          setMyReaction(reaction);
+        } else {
+          setMyReaction(null);
+        }
       } else {
         setReactions((prev) => ({
           ...prev,
@@ -101,6 +124,11 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
     renoteMutation.mutate();
   };
 
+  const handleReactionSelect = (reaction: string) => {
+    reactionMutation.mutate(reaction);
+    setShowReactionPicker(false);
+  };
+
   const renderRenote = () => {
     if (!note.renote) return null;
     return (
@@ -127,23 +155,65 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
   const renderReactions = () => {
     return (
       <View style={styles.reactions}>
-        {Object.entries(reactions).map(
-          ([reaction, count]) =>
-            count > 0 && (
-              <Pressable
-                key={reaction}
-                style={[
-                  styles.reactionButton,
-                  myReaction === reaction && styles.reactionButtonActive,
-                ]}
-                onPress={() => reactionMutation.mutate(reaction)}
-              >
+        {Object.entries(reactions).map(([reaction, count]) => {
+          if (count <= 0) return null;
+
+          const customEmoji = note.reactionEmojis?.[reaction.slice(1, -1)];
+
+          return (
+            <Pressable
+              key={reaction}
+              style={[
+                styles.reactionButton,
+                myReaction === reaction && styles.reactionButtonActive,
+                customEmoji && {
+                  backgroundColor: 'transparent',
+                },
+              ]}
+              disabled={!!customEmoji}
+              onPress={() => reactionMutation.mutate(reaction)}
+            >
+              {customEmoji ? (
+                <HighPriorityImage source={{ uri: customEmoji }} style={styles.reactionEmoji} />
+              ) : (
                 <ThemedText>{reaction}</ThemedText>
-                <ThemedText style={styles.reactionCount}>{count}</ThemedText>
-              </Pressable>
-            ),
-        )}
+              )}
+              <ThemedText style={styles.reactionCount}>{count}</ThemedText>
+            </Pressable>
+          );
+        })}
       </View>
+    );
+  };
+
+  const renderReactionPicker = () => {
+    const reactions = ['👍', '❤️', '😆', '🎉', '😮', '😢', '😠'];
+
+    return (
+      <Modal
+        visible={showReactionPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReactionPicker(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowReactionPicker(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <ThemedView style={styles.reactionPickerContainer}>
+                {reactions.map((reaction) => (
+                  <Pressable
+                    key={reaction}
+                    style={styles.reactionPickerItem}
+                    onPress={() => handleReactionSelect(reaction)}
+                  >
+                    <ThemedText style={styles.reactionEmoji}>{reaction}</ThemedText>
+                  </Pressable>
+                ))}
+              </ThemedView>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     );
   };
 
@@ -177,14 +247,17 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
         <View style={styles.actions}>
           <Pressable style={styles.actionButton} onPress={onReply}>
             <Ionicons name="chatbubble-outline" size={20} color="#666" />
-            <ThemedText style={styles.actionText}>回复</ThemedText>
           </Pressable>
 
           <Pressable style={styles.actionButton} onPress={handleRenote}>
             <Ionicons name="repeat-outline" size={20} color="#666" />
-            <ThemedText style={styles.actionText}>转发</ThemedText>
+          </Pressable>
+
+          <Pressable style={styles.actionButton} onPress={() => setShowReactionPicker(true)}>
+            <Ionicons name="add-outline" size={20} color="#666" />
           </Pressable>
         </View>
+        {renderReactionPicker()}
       </View>
     </ThemedView>
   );
@@ -239,8 +312,8 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     marginTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#eee',
+    // borderTopWidth: StyleSheet.hairlineWidth,
+    // borderTopColor: '#eee',
     paddingTop: 8,
   },
   actionButton: {
@@ -290,5 +363,29 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 12,
     color: '#666',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reactionPickerContainer: {
+    flexDirection: 'row',
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  reactionPickerItem: {
+    padding: 8,
+  },
+  reactionEmoji: {
+    width: 20,
+    height: 20,
   },
 });
