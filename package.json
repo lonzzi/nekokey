@@ -23,6 +23,7 @@
     "preset": "jest-expo"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
     "@expo/vector-icons": "^14.0.2",
     "@gorhom/bottom-sheet": "^5.0.6",
     "@react-native-async-storage/async-storage": "1.23.1",

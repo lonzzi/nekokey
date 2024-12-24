@@ -7,17 +7,10 @@ import { zhCN } from 'date-fns/locale';
 import { Image as HighPriorityImage } from 'expo-image';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useState } from 'react';
-import {
-  Alert,
-  Modal,
-  Pressable,
-  StyleSheet,
-  TouchableWithoutFeedback,
-  useColorScheme,
-  View,
-} from 'react-native';
+import { Alert, Pressable, StyleSheet, useColorScheme, View } from 'react-native';
 
 import ImageLayoutGrid from './ImageView/ImageLayoutGrid';
+import ReactionPicker from './ReactionPicker';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -34,6 +27,7 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
   const queryClient = useQueryClient();
   const colorScheme = useColorScheme();
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  // const [selectedEmoji, setSelectedEmoji] = useState('');
 
   useNoteUpdated({
     endpoint,
@@ -186,37 +180,6 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
     );
   };
 
-  const renderReactionPicker = () => {
-    const reactions = ['👍', '❤️', '😆', '🎉', '😮', '😢', '😠'];
-
-    return (
-      <Modal
-        visible={showReactionPicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowReactionPicker(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setShowReactionPicker(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <ThemedView style={styles.reactionPickerContainer}>
-                {reactions.map((reaction) => (
-                  <Pressable
-                    key={reaction}
-                    style={styles.reactionPickerItem}
-                    onPress={() => handleReactionSelect(reaction)}
-                  >
-                    <ThemedText style={styles.reactionEmoji}>{reaction}</ThemedText>
-                  </Pressable>
-                ))}
-              </ThemedView>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-    );
-  };
-
   return (
     <ThemedView
       style={[styles.container, { borderBottomColor: colorScheme === 'dark' ? '#111' : '#eee' }]}
@@ -242,7 +205,7 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
         {renderImages()}
         {renderRenote()}
 
-        <View style={styles.reactionsContainer}>{renderReactions()}</View>
+        {reactions.length > 0 && <View style={styles.reactionsContainer}>{renderReactions()}</View>}
 
         <View style={styles.actions}>
           <Pressable style={styles.actionButton} onPress={onReply}>
@@ -257,7 +220,11 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
             <Ionicons name="add-outline" size={20} color="#666" />
           </Pressable>
         </View>
-        {renderReactionPicker()}
+        <ReactionPicker
+          isVisible={showReactionPicker}
+          onClose={() => setShowReactionPicker(false)}
+          onEmojiSelect={handleReactionSelect}
+        />
       </View>
     </ThemedView>
   );
@@ -371,7 +338,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reactionPickerContainer: {
-    flexDirection: 'row',
+    width: '80%',
+    maxHeight: '50%',
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#fff',
@@ -381,7 +349,20 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
+  emojiScrollView: {
+    flex: 1,
+  },
+  emojiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    padding: 8,
+  },
   reactionPickerItem: {
+    width: '12.5%', // 每行8个表情
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 8,
   },
   reactionEmoji: {
