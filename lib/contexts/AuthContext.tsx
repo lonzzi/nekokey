@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Misskey from 'misskey-js';
 import type { User } from 'misskey-js/built/entities';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 
 import { initMisskeyClient, misskeyApi } from '../api';
 
-interface AuthContextType {
+type AuthContextType = {
   user: User | null;
   /**
    * Check if the user data is fetching
@@ -19,7 +20,13 @@ interface AuthContextType {
   isAuthenticated: boolean;
   refresh: () => void;
   setToken: (token: string) => void;
-}
+  serverInfo: ServerInfo | null;
+};
+
+type ServerInfo = {
+  meta: Misskey.entities.MetaResponse;
+  emojis: Misskey.entities.EmojisResponse;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -28,16 +35,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [misskeyApiLoaded, setMisskeyApiLoaded] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading: isUserLoading } = useQuery({
     queryKey: ['user', token],
     queryFn: async () => {
-      if (!misskeyApi) {
-        return null;
-      }
+      if (!misskeyApi) return null;
 
       try {
         const userData = await misskeyApi.request('i', {});
-        AsyncStorage.setItem('user', JSON.stringify(userData));
+        await AsyncStorage.setItem('user', JSON.stringify(userData));
         return userData;
       } catch (error) {
         console.error('API request failed:', error);
@@ -45,6 +50,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'Error',
           `Failed to fetch user information: ${error instanceof Error ? error.message : String(error)}`,
         );
+        return null;
+      }
+    },
+    enabled: !!misskeyApi,
+  });
+
+  const { data: serverInfoData, isLoading: isServerInfoLoading } = useQuery({
+    queryKey: ['serverInfo', token],
+    queryFn: async () => {
+      if (!misskeyApi) return null;
+
+      try {
+        const [meta, emojis] = await Promise.all([
+          misskeyApi.request('meta', {}),
+          misskeyApi.request('emojis', {}),
+        ]);
+        return { meta, emojis };
+      } catch (error) {
+        console.error('Server info request failed:', error);
         return null;
       }
     },
@@ -69,13 +93,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user: user ?? null,
-        loading: isLoading,
+        loading: isUserLoading || isServerInfoLoading,
         loaded: !!token,
         isAuthenticated: !!user,
         refresh: () => {
           queryClient.invalidateQueries({ queryKey: ['user', token] });
+          queryClient.invalidateQueries({ queryKey: ['serverInfo', token] });
         },
         setToken,
+        serverInfo: serverInfoData ?? null,
       }}
     >
       {children}

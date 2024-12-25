@@ -5,9 +5,11 @@ import {
   Dimensions,
   Modal,
   StatusBar,
+  StyleProp,
   StyleSheet,
   TouchableWithoutFeedback,
   View,
+  ViewStyle,
 } from 'react-native';
 
 import { ImageSource, Rect } from './ImageItem';
@@ -18,9 +20,10 @@ interface ImagePreviewProps {
   numColumns?: number;
   imageSize?: number;
   spacing?: number;
+  style?: StyleProp<ViewStyle>;
 }
 
-const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
+const ImagePreview: React.FC<ImagePreviewProps> = ({ images, style }) => {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [modalVisible, setModalVisible] = useState(false);
   const imageCount = images.length;
@@ -71,7 +74,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
 
   return (
     <View
-      style={styles.container}
+      style={[styles.container, style]}
       onLayout={(event) => {
         const { width } = event.nativeEvent.layout;
         setContainerWidth(width);
@@ -156,15 +159,12 @@ const styles = StyleSheet.create({
   thumbnailImage: {
     width: '100%',
     height: '100%',
+    backgroundColor: '#E5E5E5',
   },
   imageContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 2,
-    marginVertical: 8,
-  },
-  singleImageContainer: {
-    minHeight: 200,
   },
   singleImage: {
     width: '100%',
