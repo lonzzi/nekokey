@@ -53,16 +53,14 @@ const NoteContent = ({ note, size = 'normal' }: { note: NoteType; size?: 'small'
   const contentNote = note.text ? note : note.renote;
   if (!contentNote) return null;
 
+  const textStyle = {
+    fontSize: size === 'small' ? 13 : 16,
+    lineHeight: size === 'small' ? 18 : 24,
+  };
+
   return (
     <>
-      <ThemedText
-        style={{
-          fontSize: size === 'small' ? 13 : 14,
-          lineHeight: size === 'small' ? 18 : 20,
-        }}
-      >
-        {NoteRender(contentNote)}
-      </ThemedText>
+      <ThemedText style={textStyle}>{NoteRender(contentNote)}</ThemedText>
       {contentNote.files?.length && contentNote.files.length > 0 ? (
         <ImageLayoutGrid
           images={contentNote.files.map((file) => ({
