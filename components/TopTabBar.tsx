@@ -75,6 +75,8 @@ function TopTabBar({
           onPress={async () => {
             await AsyncStorage.removeItem('token');
             await AsyncStorage.removeItem('server');
+            await AsyncStorage.removeItem('user');
+            navigation.navigate('/auth');
           }}
         >
           <Animated.Text className="text-red-500">登出</Animated.Text>

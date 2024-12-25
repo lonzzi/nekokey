@@ -7,8 +7,9 @@ import { zhCN } from 'date-fns/locale';
 import { Image as HighPriorityImage } from 'expo-image';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, useColorScheme, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
+import AutoResizingImage from './AutoResizingImage';
 import ImageLayoutGrid from './ImageView/ImageLayoutGrid';
 import ReactionPicker from './ReactionPicker';
 import { ThemedText } from './ThemedText';
@@ -19,6 +20,32 @@ interface NoteProps {
   onReply?: () => void;
   endpoint: string;
 }
+
+const NoteRender = (note: NoteType) => {
+  const customEmojis = note.emojis;
+  const text = note.text;
+
+  if (!text) return text;
+
+  const parts = text.split(/(:[\w-]+:)/g).map((part, index) => {
+    const emojiMatch = part.match(/^:([\w-]+):$/);
+    if (emojiMatch && customEmojis?.[emojiMatch[1]]) {
+      return (
+        <AutoResizingImage
+          key={index}
+          uri={customEmojis[emojiMatch[1]]}
+          height={20}
+          style={{
+            transform: [{ translateY: 6 }],
+          }}
+        />
+      );
+    }
+    return <Text key={index}>{part}</Text>;
+  });
+
+  return <>{parts}</>;
+};
 
 export function Note({ note, onReply, endpoint }: NoteProps) {
   const [reactions, setReactions] = useState(note.reactions || {});
@@ -201,7 +228,7 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
           </ThemedText>
         </View>
 
-        <ThemedText style={styles.text}>{note.text}</ThemedText>
+        <ThemedText>{NoteRender(note)}</ThemedText>
         {renderImages()}
         {renderRenote()}
 
@@ -269,18 +296,10 @@ const styles = StyleSheet.create({
   time: {
     color: '#666',
     fontSize: 14,
-    // flexShrink: 0,
-  },
-  text: {
-    fontSize: 16,
-    lineHeight: 22,
-    marginVertical: 8,
   },
   actions: {
     flexDirection: 'row',
     marginTop: 8,
-    // borderTopWidth: StyleSheet.hairlineWidth,
-    // borderTopColor: '#eee',
     paddingTop: 8,
   },
   actionButton: {

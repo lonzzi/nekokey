@@ -3,6 +3,7 @@ import { TimelineEndpoint, useInfiniteTimelines } from '@/hooks/useInfiniteTimel
 import useRefresh from '@/hooks/useRefresh';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
 import { useMisskeyStream } from '@/lib/api';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { useScrollHandlers } from '@/lib/contexts/ScrollContext';
 import { isIOS } from '@/lib/utils/platform';
 import { Ionicons } from '@expo/vector-icons';
@@ -66,6 +67,7 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
     const scrollOffset = useSharedValue(0);
     const [hasNew, setHasNew] = useState(false);
     const [newNoteIds, setNewNoteIds] = useState<Set<string>>(new Set());
+    const { user } = useAuth();
 
     const { data, refetch, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
       query;
@@ -171,7 +173,7 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
           ref={listRef}
           data={data}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => `${item.id}-${user?.id}`}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

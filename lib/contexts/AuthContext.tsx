@@ -36,7 +36,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        return await misskeyApi.request('i', {});
+        const userData = await misskeyApi.request('i', {});
+        AsyncStorage.setItem('user', JSON.stringify(userData));
+        return userData;
       } catch (error) {
         console.error('API request failed:', error);
         Alert.alert(
@@ -51,9 +53,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const fetchToken = async () => {
+      const user = await AsyncStorage.getItem('user');
       const token = await AsyncStorage.getItem('token');
       const server = await AsyncStorage.getItem('server');
-      if (token && server) {
+      if (user && token && server) {
         initMisskeyClient(token, server);
         setMisskeyApiLoaded(true);
       }
