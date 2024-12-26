@@ -8,7 +8,7 @@ import { useScrollHandlers } from '@/lib/contexts/ScrollContext';
 import { isIOS } from '@/lib/utils/platform';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useScrollToTop } from '@react-navigation/native';
+import { useIsFocused, useScrollToTop } from '@react-navigation/native';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import {
@@ -53,6 +53,8 @@ export interface TimelineListRef {
   scrollToTop: () => void;
 }
 
+const MAX_CACHED_NOTES = 100;
+
 export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndpoint }>(
   ({ endpoint }, ref) => {
     const query = useInfiniteTimelines(endpoint);
@@ -68,6 +70,9 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
     const [hasNew, setHasNew] = useState(false);
     const [newNoteIds, setNewNoteIds] = useState<Set<string>>(new Set());
     const { user } = useAuth();
+    const [isOnTop, setIsOnTop] = useState(true);
+    const isFocused = useIsFocused();
+    const [cachedNotes, setCachedNotes] = useState<NoteType[]>([]);
 
     const { data, refetch, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
       query;
@@ -79,12 +84,28 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
         scrollOffset.value = event.contentOffset.y;
         if (event.contentOffset.y <= 0) {
           runOnJS(setHasNew)(false);
+          runOnJS(setIsOnTop)(true);
+        } else {
+          runOnJS(setIsOnTop)(false);
         }
         onScroll(event);
       },
       onEndDrag,
       onMomentumEnd,
     });
+
+    useEffect(() => {
+      if (isOnTop && cachedNotes.length > 0) {
+        queryClient.setQueryData([endpoint], (oldData: InfiniteData<NoteType[]>) => {
+          if (!oldData) return { pages: [cachedNotes], pageParams: [undefined] };
+          return {
+            ...oldData,
+            pages: [[...cachedNotes, ...oldData.pages[0]], ...oldData.pages.slice(1)],
+          };
+        });
+        setCachedNotes([]);
+      }
+    }, [cachedNotes, isOnTop]);
 
     const checkForNew = useCallback(() => {
       if (isFetching || !hasNew) {
@@ -94,6 +115,16 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
     }, [refetch, isFetching, hasNew]);
 
     const scrollToTop = () => {
+      if (cachedNotes.length > 0) {
+        queryClient.setQueryData([endpoint], (oldData: InfiniteData<NoteType[]>) => {
+          if (!oldData) return { pages: [cachedNotes], pageParams: [undefined] };
+          return {
+            ...oldData,
+            pages: [[...cachedNotes, ...oldData.pages[0]], ...oldData.pages.slice(1)],
+          };
+        });
+        setCachedNotes([]);
+      }
       setHasNew(false);
       checkForNew();
       listRef.current?.scrollToOffset({ offset: -topTabBarHeight, animated: true });
@@ -141,23 +172,27 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
       const channel = stream.useChannel(TIMELINE_CHANNEL_MAP[endpoint] as 'homeTimeline');
 
       channel.on('note', async (note) => {
-        if (scrollOffset.value > 0) {
+        if (isFocused && isOnTop) {
+          queryClient.setQueryData([endpoint], (oldData: InfiniteData<NoteType[]>) => {
+            if (!oldData) return { pages: [[note]], pageParams: [undefined] };
+            return {
+              ...oldData,
+              pages: [[note, ...oldData.pages[0]], ...oldData.pages.slice(1)],
+            };
+          });
+        } else {
+          setCachedNotes((prev) => {
+            const newCache = [note, ...prev];
+            return newCache.slice(0, MAX_CACHED_NOTES);
+          });
           setHasNew(true);
         }
-
-        queryClient.setQueryData([endpoint], (oldData: InfiniteData<NoteType[]>) => {
-          if (!oldData) return { pages: [[note]], pageParams: [undefined] };
-          return {
-            ...oldData,
-            pages: [[note, ...oldData.pages[0]], ...oldData.pages.slice(1)],
-          };
-        });
       });
 
       return () => {
         channel.dispose();
       };
-    }, [stream, queryClient, query]);
+    }, [stream, queryClient, isFocused, isOnTop]);
 
     if (isLoading) {
       return (
