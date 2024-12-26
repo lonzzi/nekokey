@@ -95,7 +95,7 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
     });
 
     useEffect(() => {
-      if (isOnTop && cachedNotes.length > 0) {
+      if (isFocused && isOnTop && cachedNotes.length > 0) {
         queryClient.setQueryData([endpoint], (oldData: InfiniteData<NoteType[]>) => {
           if (!oldData) return { pages: [cachedNotes], pageParams: [undefined] };
           return {
@@ -105,7 +105,7 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
         });
         setCachedNotes([]);
       }
-    }, [cachedNotes, isOnTop]);
+    }, [cachedNotes, isFocused, isOnTop]);
 
     const checkForNew = useCallback(() => {
       if (isFetching || !hasNew) {

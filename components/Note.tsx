@@ -23,35 +23,93 @@ interface NoteProps {
   endpoint: string;
 }
 
-const NoteRender = (note: NoteType) => {
-  const customEmojis = note.emojis;
+const NoteRender = ({ note }: { note: NoteType }) => {
+  const { serverInfo } = useAuth();
   const text = note.text;
 
   if (!text) return text;
 
+  const customEmojis = note.emojis;
+
   const parts = text.split(/(:[\w-]+:)/g).map((part, index) => {
     const emojiMatch = part.match(/^:([\w-]+):$/);
-    if (emojiMatch && customEmojis?.[emojiMatch[1]]) {
-      return (
-        <AutoResizingImage
-          key={index}
-          uri={customEmojis[emojiMatch[1]]}
-          height={20}
-          style={{
-            transform: [{ translateY: 6 }],
-          }}
-        />
-      );
+    if (emojiMatch) {
+      const localEmoji = getEmoji(serverInfo?.emojis, emojiMatch[1].replace('@.', ''));
+      const emojiUrl = localEmoji || customEmojis?.[emojiMatch[1]];
+
+      if (emojiUrl) {
+        return (
+          <AutoResizingImage
+            key={index}
+            uri={emojiUrl}
+            height={20}
+            style={{
+              transform: [{ translateY: 6 }],
+            }}
+          />
+        );
+      }
     }
     return <Text key={index}>{part}</Text>;
   });
 
-  return <>{parts}</>;
+  return (
+    <>
+      {parts}
+      <Text> </Text>
+    </>
+  );
+};
+
+const ReactionViewer = ({
+  note,
+  reactions,
+  onReaction,
+}: {
+  note: NoteType;
+  reactions: Record<string, number>;
+  onReaction: (reaction: string) => void;
+}) => {
+  const { serverInfo } = useAuth();
+  const myReaction = note.myReaction;
+
+  return (
+    <View style={styles.reactions}>
+      {Object.entries(reactions).map(([reaction, count]) => {
+        if (count <= 0) return null;
+
+        const customEmoji = note.reactionEmojis?.[reaction.slice(1, -1)];
+        const localEmoji = getEmoji(serverInfo?.emojis, reaction.slice(1, -1).replace('@.', ''));
+
+        return (
+          <Pressable
+            key={reaction}
+            style={[
+              styles.reactionButton,
+              myReaction === reaction && styles.reactionButtonActive,
+              customEmoji && {
+                backgroundColor: 'transparent',
+              },
+            ]}
+            disabled={!!customEmoji}
+            onPress={() => onReaction(reaction)}
+          >
+            {customEmoji || localEmoji ? (
+              <AutoResizingImage uri={customEmoji || localEmoji || ''} height={20} />
+            ) : (
+              <ThemedText>{reaction}</ThemedText>
+            )}
+            <ThemedText style={styles.reactionCount}>{count}</ThemedText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 };
 
 const NoteContent = ({ note, size = 'normal' }: { note: NoteType; size?: 'small' | 'normal' }) => {
-  const contentNote = note.text ? note : note.renote;
-  if (!contentNote) return null;
+  const isRenote = !!note.renote;
+  const contentNote = isRenote ? note.renote : note;
 
   const textStyle = {
     fontSize: size === 'small' ? 13 : 16,
@@ -60,8 +118,12 @@ const NoteContent = ({ note, size = 'normal' }: { note: NoteType; size?: 'small'
 
   return (
     <>
-      <ThemedText style={textStyle}>{NoteRender(contentNote)}</ThemedText>
-      {contentNote.files?.length && contentNote.files.length > 0 ? (
+      {contentNote ? (
+        <ThemedText style={textStyle}>
+          <NoteRender note={contentNote} />
+        </ThemedText>
+      ) : null}
+      {contentNote?.files?.length && contentNote.files.length > 0 ? (
         <ImageLayoutGrid
           images={contentNote.files.map((file) => ({
             uri: file.url,
@@ -76,14 +138,18 @@ const NoteContent = ({ note, size = 'normal' }: { note: NoteType; size?: 'small'
   );
 };
 
-export function Note({ note, onReply, endpoint }: NoteProps) {
-  const [reactions, setReactions] = useState(note.reactions || {});
-  const [myReaction, setMyReaction] = useState(note.myReaction);
+const NoteRoot = ({
+  note,
+  onReply,
+  endpoint,
+  originalNote,
+}: NoteProps & { originalNote?: NoteType }) => {
+  const [reactions, setReactions] = useState(note?.reactions || {});
+  const [myReaction, setMyReaction] = useState(note?.myReaction);
   const api = useMisskeyApi();
   const queryClient = useQueryClient();
   const colorScheme = useColorScheme();
   const [showReactionPicker, setShowReactionPicker] = useState(false);
-  const { serverInfo } = useAuth();
 
   useNoteUpdated({
     endpoint,
@@ -201,47 +267,12 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
     );
   };
 
-  const renderReactions = () => {
-    return (
-      <View style={styles.reactions}>
-        {Object.entries(reactions).map(([reaction, count]) => {
-          if (count <= 0) return null;
-
-          const customEmoji = note.reactionEmojis?.[reaction.slice(1, -1)];
-          const localEmoji = getEmoji(serverInfo?.emojis, reaction.slice(1, -1));
-
-          return (
-            <Pressable
-              key={reaction}
-              style={[
-                styles.reactionButton,
-                myReaction === reaction && styles.reactionButtonActive,
-                customEmoji && {
-                  backgroundColor: 'transparent',
-                },
-              ]}
-              disabled={!!customEmoji}
-              onPress={() => reactionMutation.mutate(reaction)}
-            >
-              {customEmoji || localEmoji ? (
-                <AutoResizingImage uri={customEmoji || localEmoji || ''} height={20} />
-              ) : (
-                <ThemedText>{reaction}</ThemedText>
-              )}
-              <ThemedText style={styles.reactionCount}>{count}</ThemedText>
-            </Pressable>
-          );
-        })}
-      </View>
-    );
-  };
-
   const renderRenoteHeader = () => {
-    if (!note.renote || note.text) return null;
+    if (!originalNote) return null;
     return (
       <View style={styles.renoteHeaderContainer}>
         <Ionicons name="repeat-outline" size={16} color="#666" />
-        <ThemedText style={styles.renoteHeaderText}>{note.user.name} 已转贴</ThemedText>
+        <ThemedText style={styles.renoteHeaderText}>{originalNote.user.name} 已转贴</ThemedText>
       </View>
     );
   };
@@ -258,21 +289,16 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
     >
       {renderRenoteHeader()}
       <View style={styles.noteContainer}>
-        <HighPriorityImage
-          source={{ uri: note.text ? note.user.avatarUrl : note.renote?.user.avatarUrl || '' }}
-          style={styles.avatar}
-        />
+        <HighPriorityImage source={{ uri: note.user.avatarUrl || '' }} style={styles.avatar} />
         <View style={styles.content}>
           <View style={styles.header}>
             <View style={styles.userInfo}>
               <ThemedText numberOfLines={1}>
                 <ThemedText type="defaultSemiBold" style={styles.name}>
-                  {note.text ? note.user.name : note.renote?.user.name}
+                  {note.user.name}
                 </ThemedText>
                 {'  '}
-                <ThemedText style={styles.username}>
-                  @{note.text ? note.user.username : note.renote?.user.username}
-                </ThemedText>
+                <ThemedText style={styles.username}>@{note.user.username}</ThemedText>
               </ThemedText>
             </View>
             <ThemedText style={styles.time}>
@@ -281,9 +307,9 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
           </View>
 
           <NoteContent note={note} />
-          {note.text && renderRenote()}
+          {renderRenote()}
 
-          <View style={reactions.length > 0 && styles.reactionsContainer}>{renderReactions()}</View>
+          <ReactionViewer note={note} reactions={reactions} onReaction={handleReactionSelect} />
 
           <View style={styles.actions}>
             <Pressable style={styles.actionButton} onPress={onReply}>
@@ -306,6 +332,20 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
         </View>
       </View>
     </ThemedView>
+  );
+};
+
+export function Note({ note, onReply, endpoint }: NoteProps) {
+  const isOnlyRenote = !!note.renote && !note.text;
+  const currentNote = isOnlyRenote && note.renote ? note.renote : note;
+
+  return (
+    <NoteRoot
+      note={currentNote}
+      onReply={onReply}
+      endpoint={endpoint}
+      originalNote={isOnlyRenote ? note : undefined}
+    />
   );
 }
 
@@ -392,12 +432,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
-  reactionsContainer: {
-    marginTop: 8,
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
   reactions: {
+    marginTop: 8,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
