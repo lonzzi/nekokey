@@ -2,12 +2,31 @@ import { Pager, RenderTabBarFnProps } from '@/components/Pager';
 import { GlobalTimeline, HomeTimeline, LocalTimeline } from '@/components/TimelineList';
 import TopTabBar from '@/components/TopTabBar';
 import TabBarBackground from '@/components/ui/TabBarBackground';
-import { useTopTabBar } from '@/hooks/useTopTabBar';
+import { useTopTabBar } from '@/lib/contexts/TopTabBarContext';
 import { useCallback } from 'react';
 import { View } from 'react-native';
 
+const TIMELINE_TABS = [
+  {
+    key: 'home',
+    label: '主页',
+    component: HomeTimeline,
+  },
+  {
+    key: 'global',
+    label: '全站',
+    component: GlobalTimeline,
+  },
+  {
+    key: 'local',
+    label: '本站',
+    component: LocalTimeline,
+  },
+] as const;
+
 export default function HomeScreen() {
-  const { showTabBar } = useTopTabBar();
+  const { showTabBar, currentIndex } = useTopTabBar();
+
   const renderTabBar = useCallback(
     (props: RenderTabBarFnProps) => (
       <TopTabBar
@@ -17,11 +36,7 @@ export default function HomeScreen() {
         onSelectTab={props.onSelect}
         dragProgress={props.dragProgress}
         dragState={props.dragState}
-        tabs={[
-          { key: 'home', label: '主页' },
-          { key: 'global', label: '全站' },
-          { key: 'local', label: '本站' },
-        ]}
+        tabs={TIMELINE_TABS.map(({ key, label }) => ({ key, label }))}
       />
     ),
     [],
@@ -36,15 +51,11 @@ export default function HomeScreen() {
         }
       }}
     >
-      <View key="home">
-        <HomeTimeline />
-      </View>
-      <View key="global">
-        <GlobalTimeline />
-      </View>
-      <View key="local">
-        <LocalTimeline />
-      </View>
+      {TIMELINE_TABS.map(({ key, component: TimelineComponent }, index) => (
+        <View key={key}>
+          <TimelineComponent isFocused={currentIndex === index} />
+        </View>
+      ))}
     </Pager>
   );
 }

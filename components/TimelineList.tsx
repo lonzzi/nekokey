@@ -8,7 +8,7 @@ import { useScrollHandlers } from '@/lib/contexts/ScrollContext';
 import { isIOS } from '@/lib/utils/platform';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useIsFocused, useScrollToTop } from '@react-navigation/native';
+import { useScrollToTop } from '@react-navigation/native';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import {
@@ -49,14 +49,19 @@ const TIMELINE_CHANNEL_MAP = {
 
 const MemoizedNote = memo(Note, (prev, next) => prev.note.id === next.note.id);
 
-export interface TimelineListRef {
+export type TimelineListRef = {
   scrollToTop: () => void;
-}
+};
+
+export type TimelineListProps = {
+  endpoint: TimelineEndpoint;
+  isFocused?: boolean;
+};
 
 const MAX_CACHED_NOTES = 100;
 
-export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndpoint }>(
-  ({ endpoint }, ref) => {
+export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
+  ({ endpoint, isFocused = true }, ref) => {
     const query = useInfiniteTimelines(endpoint);
     const topTabBarHeight = useTopTabBarHeight();
     const bottomTabHeight = useBottomTabBarHeight();
@@ -71,7 +76,6 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
     const [newNoteIds, setNewNoteIds] = useState<Set<string>>(new Set());
     const { user } = useAuth();
     const [isOnTop, setIsOnTop] = useState(true);
-    const isFocused = useIsFocused();
     const [cachedNotes, setCachedNotes] = useState<NoteType[]>([]);
 
     const { data, refetch, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -280,13 +284,19 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
 );
 TimelineList.displayName = 'TimelineList';
 
-export const HomeTimeline = memo(() => <TimelineList endpoint="notes/timeline" />);
+export const HomeTimeline = memo((props: Omit<TimelineListProps, 'endpoint'>) => (
+  <TimelineList {...props} endpoint="notes/timeline" />
+));
 HomeTimeline.displayName = 'HomeTimeline';
 
-export const GlobalTimeline = memo(() => <TimelineList endpoint="notes/global-timeline" />);
+export const GlobalTimeline = memo((props: Omit<TimelineListProps, 'endpoint'>) => (
+  <TimelineList {...props} endpoint="notes/global-timeline" />
+));
 GlobalTimeline.displayName = 'GlobalTimeline';
 
-export const LocalTimeline = memo(() => <TimelineList endpoint="notes/local-timeline" />);
+export const LocalTimeline = memo((props: Omit<TimelineListProps, 'endpoint'>) => (
+  <TimelineList {...props} endpoint="notes/local-timeline" />
+));
 LocalTimeline.displayName = 'LocalTimeline';
 
 const styles = StyleSheet.create({
