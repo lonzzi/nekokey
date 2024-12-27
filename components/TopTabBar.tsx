@@ -7,7 +7,7 @@ import { useNavigation, useTheme } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { Platform, StyleSheet, TouchableOpacity, useColorScheme, View } from 'react-native';
-import Animated, { SharedValue, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { interpolate, SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TAB_WIDTH = 60;
@@ -97,6 +97,19 @@ function TopTabBar({
         {tabs.map((tab, index) => {
           const isFocused = selectedIndex === index;
 
+          const tabAnimatedStyle = useAnimatedStyle(() => {
+            const opacity = interpolate(
+              dragProgress.value,
+              [index - 1, index, index + 1],
+              [0.3, 1, 0.3],
+              'clamp',
+            );
+
+            return {
+              opacity: isFocused ? 1 : opacity,
+            };
+          });
+
           return (
             <View key={tab.key}>
               <TouchableOpacity
@@ -108,8 +121,8 @@ function TopTabBar({
                 <Animated.Text
                   style={[
                     styles.tabText,
+                    tabAnimatedStyle,
                     {
-                      opacity: isFocused ? 1 : 0.3,
                       color: colors.text,
                       fontWeight: isFocused ? '600' : '400',
                     },
