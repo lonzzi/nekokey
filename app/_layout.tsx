@@ -23,6 +23,9 @@ import { Platform } from 'react-native';
 import '../global.css';
 import '../i18n/config';
 
+import { DrawerProvider } from '@/lib/contexts/DrawerContext';
+import { TopTabBarProvider } from '@/lib/contexts/TopTabBarContext';
+
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
@@ -91,21 +94,25 @@ export default function RootLayout() {
         <AuthProvider>
           <ShellModeProvider>
             <MainScrollProvider>
-              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <Stack>
-                  <Stack.Screen
-                    name="auth"
-                    options={{
-                      headerShown: false,
-                      // 防止用户通过返回按钮回到登录页
-                      gestureEnabled: false,
-                    }}
-                  />
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="+not-found" />
-                </Stack>
-                <StatusBar style="auto" backgroundColor="transparent" translucent={true} />
-              </ThemeProvider>
+              <DrawerProvider>
+                <TopTabBarProvider>
+                  <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                    <Stack>
+                      <Stack.Screen
+                        name="auth"
+                        options={{
+                          headerShown: false,
+                          // 防止用户通过返回按钮回到登录页
+                          gestureEnabled: false,
+                        }}
+                      />
+                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                      <Stack.Screen name="+not-found" />
+                    </Stack>
+                    <StatusBar style="auto" backgroundColor="transparent" translucent={true} />
+                  </ThemeProvider>
+                </TopTabBarProvider>
+              </DrawerProvider>
             </MainScrollProvider>
           </ShellModeProvider>
         </AuthProvider>

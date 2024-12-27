@@ -1,45 +1,51 @@
 import { Colors } from '@/constants/Colors';
 import { useHeaderTransform } from '@/hooks/useHeaderTransform';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
+import { useTopTabBar } from '@/lib/contexts/TopTabBarContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
-import { useLinkBuilder, useTheme } from '@react-navigation/native';
+import { useNavigation, useTheme } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  Platform,
-  Animated as RNAnimated,
-  StyleSheet,
-  TouchableOpacity,
-  useColorScheme,
-  View,
-} from 'react-native';
-import Animated from 'react-native-reanimated';
+import { useEffect } from 'react';
+import { Platform, StyleSheet, TouchableOpacity, useColorScheme, View } from 'react-native';
+import Animated, { SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TAB_WIDTH = 60;
 
-type TabBarProps = MaterialTopTabBarProps & {
+interface TopTabBarProps {
   headerTitle?: React.ReactNode;
   tabBarBackground?: () => React.ReactNode;
-};
+  selectedIndex: number;
+  onSelectTab?: (index: number) => void;
+  dragProgress: SharedValue<number>;
+  dragState: SharedValue<'idle' | 'dragging' | 'settling'>;
+  tabs: { key: string; label: string }[];
+}
 
 function TopTabBar({
-  state,
-  descriptors,
-  navigation,
-  position,
   headerTitle,
   tabBarBackground,
-}: TabBarProps) {
+  selectedIndex,
+  onSelectTab,
+  dragProgress,
+  tabs,
+}: TopTabBarProps) {
+  const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { colors } = useTheme();
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const topTabBarHeight = useTopTabBarHeight();
-  const { buildHref } = useLinkBuilder();
   const headerTransform = useHeaderTransform();
+  const { setCurrentIndex } = useTopTabBar();
 
-  const inputRange = state.routes.map((_, i) => i);
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: dragProgress.value * TAB_WIDTH }],
+  }));
+
+  useEffect(() => {
+    setCurrentIndex(selectedIndex);
+  }, [selectedIndex]);
 
   return (
     <Animated.View
@@ -76,7 +82,7 @@ function TopTabBar({
             await AsyncStorage.removeItem('token');
             await AsyncStorage.removeItem('server');
             await AsyncStorage.removeItem('user');
-            navigation.navigate('/auth');
+            navigation.navigate('/auth' as never);
           }}
         >
           <Animated.Text className="text-red-500">登出</Animated.Text>
@@ -88,94 +94,38 @@ function TopTabBar({
       </View>
 
       <View style={styles.tabContainer}>
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const label =
-            options.tabBarLabel !== undefined
-              ? options.tabBarLabel
-              : options.title !== undefined
-                ? options.title
-                : route.name;
-
-          const isFocused = state.index === index;
-
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name, route.params);
-            }
-          };
-
-          const onLongPress = () => {
-            navigation.emit({
-              type: 'tabLongPress',
-              target: route.key,
-            });
-          };
+        {tabs.map((tab, index) => {
+          const isFocused = selectedIndex === index;
 
           return (
-            <View key={route.key}>
+            <View key={tab.key}>
               <TouchableOpacity
-                {...(Platform.OS === 'web' ? { href: buildHref(route.name, route.params) } : {})}
-                accessibilityRole={Platform.OS === 'web' ? 'link' : 'button'}
+                accessibilityRole="button"
                 accessibilityState={isFocused ? { selected: true } : {}}
-                accessibilityLabel={options.tabBarAccessibilityLabel}
-                testID={options.tabBarButtonTestID}
-                onPress={onPress}
-                onLongPress={onLongPress}
+                onPress={() => onSelectTab?.(index)}
                 style={styles.tabButton}
               >
-                <RNAnimated.Text
+                <Animated.Text
                   style={[
                     styles.tabText,
                     {
-                      opacity:
-                        inputRange.length >= 2
-                          ? position.interpolate({
-                              inputRange,
-                              outputRange: inputRange.map((i) => (i === index ? 1 : 0.3)),
-                            })
-                          : 1,
+                      opacity: isFocused ? 1 : 0.3,
                       color: colors.text,
                       fontWeight: isFocused ? '600' : '400',
                     },
                   ]}
                 >
-                  {typeof label === 'function'
-                    ? label({ focused: isFocused, color: colors.text, children: '' })
-                    : label}
-                </RNAnimated.Text>
+                  {tab.label}
+                </Animated.Text>
               </TouchableOpacity>
             </View>
           );
         })}
       </View>
 
-      <RNAnimated.View
-        style={[
-          styles.containerIndicator,
-          {
-            transform: [
-              {
-                translateX:
-                  inputRange.length >= 2
-                    ? position.interpolate({
-                        inputRange,
-                        outputRange: inputRange.map((i) => i * TAB_WIDTH),
-                      })
-                    : 0,
-              },
-            ],
-          },
-        ]}
-      >
+      <Animated.View style={[styles.containerIndicator, indicatorStyle]}>
         <View style={{ backgroundColor: colors.primary, height: 2, width: '60%' }} />
-      </RNAnimated.View>
+      </Animated.View>
     </Animated.View>
   );
 }

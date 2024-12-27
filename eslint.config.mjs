@@ -20,6 +20,7 @@ export default [
       'no-undef': 'off',
       'react/react-in-jsx-scope': 'off',
       '@typescript-eslint/no-require-imports': 'off',
+      'react/prop-types': 'off',
     },
   },
 ];

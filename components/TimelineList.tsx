@@ -221,7 +221,7 @@ export const TimelineList = forwardRef<TimelineListRef, { endpoint: TimelineEndp
           }}
           contentInset={{ top: topTabBarHeight, bottom: bottomTabHeight }}
           contentOffset={{ x: 0, y: -topTabBarHeight }}
-          scrollIndicatorInsets={{ top: topTabBarHeight, bottom: bottomTabHeight }}
+          // scrollIndicatorInsets={{ top: topTabBarHeight, bottom: bottomTabHeight }}
           style={[
             styles.container,
             {
