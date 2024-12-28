@@ -1,5 +1,8 @@
 name: EAS Android Build
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       environment:
@@ -39,7 +42,7 @@ jobs:
         run: eas build --local --platform android --profile ${{ inputs.environment }} --non-interactive
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: app-release
+          name: android-release-${{ github.ref_name }}
           path: build-*.apk

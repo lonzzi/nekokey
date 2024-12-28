@@ -43,7 +43,18 @@
           "color": "#ffffff"
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "useLegacyPackaging": true
+          },
+          "ios": {}
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

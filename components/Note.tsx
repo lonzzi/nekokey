@@ -13,7 +13,7 @@ import { Alert, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-
 
 import AutoResizingImage from './AutoResizingImage';
 import ImageLayoutGrid from './ImageView/ImageLayoutGrid';
-import ReactionPicker from './ReactionPicker';
+// import ReactionPicker from './ReactionPicker';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -149,7 +149,7 @@ const NoteRoot = ({
   const api = useMisskeyApi();
   const queryClient = useQueryClient();
   const colorScheme = useColorScheme();
-  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [, setShowReactionPicker] = useState(false);
 
   useNoteUpdated({
     endpoint,
@@ -324,11 +324,11 @@ const NoteRoot = ({
               <Ionicons name="add-outline" size={20} color="#666" />
             </Pressable>
           </View>
-          <ReactionPicker
+          {/* <ReactionPicker
             isVisible={showReactionPicker}
             onClose={() => setShowReactionPicker(false)}
             onEmojiSelect={handleReactionSelect}
-          />
+          /> */}
         </View>
       </View>
     </ThemedView>

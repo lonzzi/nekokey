@@ -89,7 +89,7 @@ export default function TabLayout() {
               position: 'absolute',
             },
             android: {
-              height: 80,
+              height: 70,
             },
             default: {},
           }),

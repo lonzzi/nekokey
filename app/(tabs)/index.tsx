@@ -52,7 +52,7 @@ export default function HomeScreen() {
       }}
     >
       {TIMELINE_TABS.map(({ key, component: TimelineComponent }, index) => (
-        <View key={key}>
+        <View key={key} className="flex-1">
           <TimelineComponent isFocused={currentIndex === index} />
         </View>
       ))}
