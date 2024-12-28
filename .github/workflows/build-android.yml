@@ -1,7 +1,16 @@
 name: EAS Android Build
 on:
-  push:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Build profile (development/preview/production)'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - development
+          - preview
+          - production
 
 jobs:
   build:
@@ -14,7 +23,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 18.x
+          node-version: '20'
           cache: 'npm'
 
       - name: Setup EAS
@@ -27,7 +36,7 @@ jobs:
         run: npm install
 
       - name: Build Android
-        run: eas build --local --platform android --non-interactive
+        run: eas build --local --platform android --profile ${{ inputs.environment }} --non-interactive
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v3
