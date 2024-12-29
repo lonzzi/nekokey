@@ -1,39 +1,43 @@
-import { Image } from 'expo-image';
-import React, { useState } from 'react';
+import { isAndroid } from '@/lib/utils/platform';
+import { Image, useImage } from 'expo-image';
+import React from 'react';
 import { ImageStyle, StyleProp } from 'react-native';
 
 const AutoResizingImage = ({
-  uri,
+  source,
   height = 24,
   className,
   style,
 }: {
-  uri: string;
+  source: { uri: string };
   height?: number;
   className?: string;
   style?: StyleProp<ImageStyle>;
 }) => {
-  const [imageSize, setImageSize] = useState({ width: height, height: height });
+  const image = useImage(source.uri, {
+    maxHeight: height,
+    onError: (error) => {
+      console.log(error);
+    },
+  });
 
-  const onImageLoad = ({ source }: { source: { width: number; height: number } }) => {
-    const { width, height: sourceHeight } = source;
-    if (width && sourceHeight) {
-      const scaleFactor = height / sourceHeight;
-      setImageSize({
-        width: width * scaleFactor,
-        height: height,
-      });
-    }
+  if (!image) return null;
+
+  const imageAspectRatio = image.width / image.height;
+
+  const imageSize = {
+    width: isAndroid ? imageAspectRatio * height : image.width,
+    height: isAndroid ? height : image.height,
   };
 
   return (
     <Image
       className={className}
-      source={{ uri }}
+      source={source}
       style={[imageSize, style]}
-      onLoad={onImageLoad}
       contentFit="contain"
       cachePolicy="memory-disk"
+      recyclingKey={source.uri}
     />
   );
 };

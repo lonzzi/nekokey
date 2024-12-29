@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { Image as HighPriorityImage } from 'expo-image';
+import { Image } from 'expo-image';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
@@ -23,43 +23,44 @@ interface NoteProps {
   endpoint: string;
 }
 
-const NoteRender = ({ note }: { note: NoteType }) => {
+const NoteRender = React.memo(({ note }: { note: NoteType }) => {
   const { serverInfo } = useAuth();
   const text = note.text;
 
-  if (!text) return text;
+  if (!text) return null;
 
-  const customEmojis = note.emojis;
+  const parts = React.useMemo(() => {
+    const customEmojis = note.emojis;
 
-  const parts = text.split(/(:[\w-]+:)/g).map((part, index) => {
-    const emojiMatch = part.match(/^:([\w-]+):$/);
-    if (emojiMatch) {
-      const localEmoji = getEmoji(serverInfo?.emojis, emojiMatch[1].replace('@.', ''));
-      const emojiUrl = localEmoji || customEmojis?.[emojiMatch[1]];
-
-      if (emojiUrl) {
-        return (
-          <AutoResizingImage
-            key={index}
-            uri={emojiUrl}
-            height={20}
-            style={{
-              transform: [{ translateY: 6 }],
-            }}
-          />
-        );
+    return text.split(/(:[\w-]+:)/g).map((part, index) => {
+      const emojiMatch = part.match(/^:([\w-]+):$/);
+      if (!emojiMatch) {
+        return <Text key={index}>{part}</Text>;
       }
-    }
-    return <Text key={index}>{part}</Text>;
-  });
 
-  return (
-    <>
-      {parts}
-      <Text> </Text>
-    </>
-  );
-};
+      const emojiName = emojiMatch[1].replace('@.', '');
+      const emojiUrl = getEmoji(serverInfo?.emojis, emojiName) || customEmojis?.[emojiMatch[1]];
+
+      if (!emojiUrl) {
+        return <Text key={index}>{part}</Text>;
+      }
+
+      return (
+        <AutoResizingImage
+          key={index}
+          source={{ uri: emojiUrl }}
+          height={20}
+          style={{
+            transform: [{ translateY: 6 }],
+          }}
+        />
+      );
+    });
+  }, [text, note.emojis, serverInfo?.emojis]);
+
+  return <>{parts}</>;
+});
+NoteRender.displayName = 'NoteRender';
 
 const ReactionViewer = ({
   note,
@@ -95,7 +96,7 @@ const ReactionViewer = ({
             onPress={() => onReaction(reaction)}
           >
             {customEmoji || localEmoji ? (
-              <AutoResizingImage uri={customEmoji || localEmoji || ''} height={20} />
+              <AutoResizingImage source={{ uri: customEmoji || localEmoji || '' }} height={20} />
             ) : (
               <ThemedText>{reaction}</ThemedText>
             )}
@@ -250,10 +251,7 @@ const NoteRoot = ({
     return (
       <ThemedView style={styles.renoteContainer}>
         <View style={styles.renoteUserInfo}>
-          <HighPriorityImage
-            source={{ uri: note.renote.user.avatarUrl || '' }}
-            style={styles.renoteAvatar}
-          />
+          <Image source={{ uri: note.renote.user.avatarUrl || '' }} style={styles.renoteAvatar} />
           <ThemedText numberOfLines={1}>
             <ThemedText type="defaultSemiBold" style={styles.name}>
               {note.renote?.user.name}
@@ -289,7 +287,7 @@ const NoteRoot = ({
     >
       {renderRenoteHeader()}
       <View style={styles.noteContainer}>
-        <HighPriorityImage source={{ uri: note.user.avatarUrl || '' }} style={styles.avatar} />
+        <Image source={{ uri: note.user.avatarUrl || '' }} style={styles.avatar} />
         <View style={styles.content}>
           <View style={styles.header}>
             <View style={styles.userInfo}>
