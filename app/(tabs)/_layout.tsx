@@ -1,3 +1,4 @@
+import { DrawerContent } from '@/components/Drawer';
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
@@ -11,7 +12,7 @@ import { isAndroid, isIOS } from '@/lib/utils/platform';
 import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
 import { useCallback } from 'react';
-import { ColorSchemeName, Platform, useWindowDimensions, View } from 'react-native';
+import { ColorSchemeName, Platform, useWindowDimensions } from 'react-native';
 import { Drawer } from 'react-native-drawer-layout';
 
 const getOverlayColor = (scheme: ColorSchemeName) => {
@@ -44,7 +45,7 @@ export default function TabLayout() {
 
   return (
     <Drawer
-      renderDrawerContent={() => <View></View>}
+      renderDrawerContent={DrawerContent}
       drawerStyle={{ width: Math.min(400, winDim.width * 0.8) }}
       configureGestureHandler={(handler) => {
         if (swipeEnabled) {

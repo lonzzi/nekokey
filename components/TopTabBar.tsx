@@ -3,8 +3,9 @@ import { useHeaderTransform } from '@/hooks/useHeaderTransform';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
 import { useTopTabBar } from '@/lib/contexts/TopTabBarContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation, useTheme } from '@react-navigation/native';
+import { useTheme } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform, StyleSheet, TouchableOpacity, useColorScheme, View } from 'react-native';
 import Animated, { interpolate, SharedValue, useAnimatedStyle } from 'react-native-reanimated';
@@ -30,7 +31,6 @@ function TopTabBar({
   dragProgress,
   tabs,
 }: TopTabBarProps) {
-  const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { colors } = useTheme();
   const colorScheme = useColorScheme();
@@ -82,7 +82,7 @@ function TopTabBar({
             await AsyncStorage.removeItem('token');
             await AsyncStorage.removeItem('server');
             await AsyncStorage.removeItem('user');
-            navigation.navigate('/auth' as never);
+            router.replace('/auth');
           }}
         >
           <Animated.Text className="text-red-500">登出</Animated.Text>

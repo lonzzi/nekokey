@@ -1,14 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Misskey from 'misskey-js';
-import type { User } from 'misskey-js/built/entities';
+import type { UserDetailed } from 'misskey-js/built/entities';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 
 import { initMisskeyClient, misskeyApi } from '../api';
 
 type AuthContextType = {
-  user: User | null;
+  user: UserDetailed | null;
   /**
    * Check if the user data is fetching
    */
@@ -41,9 +41,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!misskeyApi) return null;
 
       try {
-        const userData = await misskeyApi.request('i', {});
-        await AsyncStorage.setItem('user', JSON.stringify(userData));
-        return userData;
+        const cachedUserData = await AsyncStorage.getItem('userData');
+        let userData;
+
+        if (!cachedUserData) {
+          userData = await misskeyApi.request('i', {});
+          await AsyncStorage.setItem('userData', JSON.stringify(userData));
+        } else {
+          userData = JSON.parse(cachedUserData);
+        }
+
+        const userDetail = await misskeyApi.request('users/show', {
+          userId: userData.id,
+        });
+        await AsyncStorage.setItem('user', JSON.stringify(userDetail));
+        return userDetail;
       } catch (error) {
         console.error('API request failed:', error);
         Alert.alert(
@@ -97,8 +109,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loaded: !!token,
         isAuthenticated: !!user,
         refresh: () => {
-          queryClient.invalidateQueries({ queryKey: ['user', token] });
-          queryClient.invalidateQueries({ queryKey: ['serverInfo', token] });
+          AsyncStorage.removeItem('userData').then(() => {
+            queryClient.invalidateQueries({ queryKey: ['user', token] });
+            queryClient.invalidateQueries({ queryKey: ['serverInfo', token] });
+          });
         },
         setToken,
         serverInfo: serverInfoData ?? null,
