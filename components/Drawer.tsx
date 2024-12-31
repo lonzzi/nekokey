@@ -1,29 +1,57 @@
+import { IconNameMap, IconSymbol, IconType } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useSetDrawerOpen } from '@/lib/contexts/DrawerContext';
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Href, router } from 'expo-router';
 import { NavigationOptions } from 'expo-router/build/global-state/routing';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type DrawerItem = {
+export type DrawerItem = {
   label: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: {
+    type?: IconType;
+    name: IconNameMap[IconType];
+  };
   path: Href;
   options?: NavigationOptions;
 };
 
 const groupedItems: Record<string, DrawerItem[]> = {
   main: [
-    { label: '主页', icon: 'home-outline', path: '/' },
-    // { label: '通知', icon: 'notifications-outline', path: '/my/notifications' },
-    // { label: '便签', icon: 'bookmark-outline', path: '/my/clips' },
-    { label: '发现', icon: 'compass-outline', path: '/explore' },
-    { label: '公告', icon: 'megaphone-outline', path: '/announcements' },
-    { label: '搜索', icon: 'search-outline', path: '/search' },
+    {
+      label: '主页',
+      icon: { name: 'home-outline' },
+      path: '/',
+    },
+    {
+      label: '通知',
+      icon: { name: 'notifications-outline' },
+      path: '/my/notifications',
+    },
+    {
+      label: '发现',
+      icon: { name: 'compass-outline' },
+      path: '/explore',
+    },
+    {
+      label: '公告',
+      icon: { name: 'megaphone-outline' },
+      path: '/announcements',
+    },
+    {
+      label: '搜索',
+      icon: { name: 'search-outline' },
+      path: '/search',
+    },
   ],
-  system: [{ label: '设置', icon: 'settings-outline', path: '/settings' }],
+  system: [
+    {
+      label: '设置',
+      icon: { name: 'settings-outline' },
+      path: '/settings',
+    },
+  ],
 };
 
 export const DrawerContent = () => {
@@ -46,7 +74,7 @@ export const DrawerContent = () => {
           }}
           className="flex-row items-center py-4"
         >
-          <Ionicons name={item.icon} size={26} className="text-gray-900" />
+          <IconSymbol name={item.icon.name} type={item.icon.type} size={26} color="#111827" />
           <Text className="ml-4 text-2xl font-medium">{item.label}</Text>
         </Pressable>
       ))}

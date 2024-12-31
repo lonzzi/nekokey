@@ -1,43 +1,73 @@
-// This file is a fallback for using MaterialIcons on Android and web.
-
+import Foundation from '@expo/vector-icons/Foundation';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolWeight } from 'expo-symbols';
 import React from 'react';
 import { OpaqueColorValue, StyleProp, TextStyle } from 'react-native';
 
-// Add your SFSymbol to MaterialIcons mappings here.
-const MAPPING = {
-  // See MaterialIcons here: https://icons.expo.fyi
-  // See SF Symbols in the SF Symbols app on Mac.
-  'house.fill': 'home',
-  'paperplane.fill': 'send',
-  'chevron.left.forwardslash.chevron.right': 'code',
-  'chevron.right': 'chevron-right',
-} as Partial<
-  Record<
-    import('expo-symbols').SymbolViewProps['name'],
-    React.ComponentProps<typeof MaterialIcons>['name']
-  >
->;
+export type IconType = 'material' | 'foundation' | 'ionicons' | 'material-community';
 
-export type IconSymbolName = keyof typeof MAPPING;
+export type IconNameMap = {
+  material: keyof typeof MaterialIcons.glyphMap;
+  foundation: keyof typeof Foundation.glyphMap;
+  ionicons: keyof typeof Ionicons.glyphMap;
+  'material-community': keyof typeof MaterialCommunityIcons.glyphMap;
+};
 
-/**
- * An icon component that uses native SFSymbols on iOS, and MaterialIcons on Android and web. This ensures a consistent look across platforms, and optimal resource usage.
- *
- * Icon `name`s are based on SFSymbols and require manual mapping to MaterialIcons.
- */
-export function IconSymbol({
-  name,
-  size = 24,
-  color,
-  style,
-}: {
-  name: IconSymbolName;
+export interface IconSymbolProps<T extends IconType> {
+  type?: T;
+  name: IconNameMap[T];
   size?: number;
   color: string | OpaqueColorValue;
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
-}) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+}
+
+export function IconSymbol<T extends IconType = 'ionicons'>({
+  name,
+  type = 'ionicons' as T,
+  size = 24,
+  color,
+  style,
+}: IconSymbolProps<T>) {
+  switch (type) {
+    case 'foundation':
+      return (
+        <Foundation
+          name={name as keyof typeof Foundation.glyphMap}
+          size={size}
+          color={color}
+          style={style}
+        />
+      );
+    case 'material':
+      return (
+        <MaterialIcons
+          name={name as keyof typeof MaterialIcons.glyphMap}
+          size={size}
+          color={color}
+          style={style}
+        />
+      );
+    case 'material-community':
+      return (
+        <MaterialCommunityIcons
+          name={name as keyof typeof MaterialCommunityIcons.glyphMap}
+          size={size}
+          color={color}
+          style={style}
+        />
+      );
+    case 'ionicons':
+    default:
+      return (
+        <Ionicons
+          name={name as keyof typeof Ionicons.glyphMap}
+          size={size}
+          color={color}
+          style={style}
+        />
+      );
+  }
 }

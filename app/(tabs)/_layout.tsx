@@ -105,7 +105,44 @@ export default function TabLayout() {
           name="index"
           options={{
             title: 'Home',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+            tabBarIcon: ({ color, focused }) => (
+              <IconSymbol size={28} name={focused ? 'home' : 'home-outline'} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="search"
+          options={{
+            title: '搜索',
+            tabBarIcon: ({ color, focused }) => (
+              <IconSymbol size={28} name={focused ? 'search' : 'search-outline'} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="my/messages"
+          options={{
+            title: '消息',
+            tabBarIcon: ({ color, focused }) => (
+              <IconSymbol
+                size={28}
+                name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="my/notifications"
+          options={{
+            title: '通知',
+            tabBarIcon: ({ color, focused }) => (
+              <IconSymbol
+                size={28}
+                name={focused ? 'notifications' : 'notifications-outline'}
+                color={color}
+              />
+            ),
           }}
         />
         <Tabs.Screen
@@ -126,10 +163,28 @@ export default function TabLayout() {
                   priority="high"
                 />
               ) : (
-                <IconSymbol size={28} name="person.fill" color={color} />
+                <IconSymbol size={28} name="person-outline" color={color} />
               ),
           }}
           initialParams={{ user: `${user?.username}` }}
+        />
+        <Tabs.Screen
+          name="announcements"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="explore"
+          options={{
+            href: null,
+          }}
         />
       </Tabs>
     </Drawer>
