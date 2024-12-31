@@ -1,8 +1,8 @@
 import { Colors } from '@/constants/Colors';
 import { useHeaderTransform } from '@/hooks/useHeaderTransform';
 import { useTopTabBarHeight } from '@/hooks/useTopTabBarHeight';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { useTopTabBar } from '@/lib/contexts/TopTabBarContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
@@ -38,6 +38,7 @@ function TopTabBar({
   const topTabBarHeight = useTopTabBarHeight();
   const headerTransform = useHeaderTransform();
   const { setCurrentIndex } = useTopTabBar();
+  const { logout } = useAuth();
 
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: dragProgress.value * TAB_WIDTH }],
@@ -79,9 +80,7 @@ function TopTabBar({
         <TouchableOpacity
           style={styles.logoutButton}
           onPress={async () => {
-            await AsyncStorage.removeItem('token');
-            await AsyncStorage.removeItem('server');
-            await AsyncStorage.removeItem('user');
+            await logout();
             router.replace('/auth');
           }}
         >
