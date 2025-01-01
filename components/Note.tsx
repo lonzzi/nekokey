@@ -58,7 +58,13 @@ const NoteRender = React.memo(({ note }: { note: NoteType }) => {
     });
   }, [text, note.emojis, serverInfo?.emojis]);
 
-  return <>{parts}</>;
+  return (
+    <>
+      {parts}
+      {/* Add a space to expand the component height. */}
+      <Text> </Text>
+    </>
+  );
 });
 NoteRender.displayName = 'NoteRender';
 

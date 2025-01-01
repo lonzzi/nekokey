@@ -57,7 +57,7 @@ function TopTabBar({
           paddingTop: insets.top,
           height: topTabBarHeight,
           borderBottomWidth: 1,
-          borderBottomColor: 'rgba(0,0,0,0.1)',
+          borderBottomColor: 'rgba(0,0,0,0.05)',
         },
         Platform.OS !== 'ios'
           ? { backgroundColor: Colors[colorScheme ?? 'light'].background }
