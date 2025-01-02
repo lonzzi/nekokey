@@ -6,7 +6,11 @@ import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { useIsDrawerOpen, useSetDrawerOpen } from '@/lib/contexts/DrawerContext';
+import {
+  useIsDrawerOpen,
+  useIsDrawerSwipeDisabled,
+  useSetDrawerOpen,
+} from '@/lib/contexts/DrawerContext';
 import { useTopTabBar } from '@/lib/contexts/TopTabBarContext';
 import { isAndroid, isIOS } from '@/lib/utils/platform';
 import { Image } from 'expo-image';
@@ -14,6 +18,10 @@ import { Tabs } from 'expo-router';
 import { useCallback } from 'react';
 import { ColorSchemeName, Platform, useWindowDimensions } from 'react-native';
 import { Drawer } from 'react-native-drawer-layout';
+
+export const unstable_settings = {
+  initialRouteName: '(home)/index',
+};
 
 const getOverlayColor = (scheme: ColorSchemeName) => {
   if (scheme === 'light') {
@@ -33,11 +41,12 @@ export default function TabLayout() {
   const { loaded, user } = useAuth();
   const isDrawerOpen = useIsDrawerOpen();
   const setIsDrawerOpen = useSetDrawerOpen();
+  const isSwipeDisabled = useIsDrawerSwipeDisabled();
   const onOpenDrawer = useCallback(() => setIsDrawerOpen(true), [setIsDrawerOpen]);
   const onCloseDrawer = useCallback(() => setIsDrawerOpen(false), [setIsDrawerOpen]);
   const { currentIndex } = useTopTabBar();
 
-  const swipeEnabled = currentIndex === 0;
+  const swipeEnabled = currentIndex === 0 && !isSwipeDisabled;
 
   if (!loaded) {
     return <LoadingScreen />;
@@ -102,7 +111,7 @@ export default function TabLayout() {
         }}
       >
         <Tabs.Screen
-          name="index"
+          name="(home)"
           options={{
             title: 'Home',
             tabBarIcon: ({ color, focused }) => (
@@ -111,7 +120,7 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="search"
+          name="(search)"
           options={{
             title: '搜索',
             tabBarIcon: ({ color, focused }) => (
@@ -120,7 +129,7 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="my/messages"
+          name="(messages)"
           options={{
             title: '消息',
             tabBarIcon: ({ color, focused }) => (
@@ -133,7 +142,7 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="my/notifications"
+          name="(notifications)"
           options={{
             title: '通知',
             tabBarIcon: ({ color, focused }) => (
@@ -146,7 +155,7 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="profile/[user]"
+          name="(profile)"
           options={{
             title: 'MyProfile',
             tabBarIcon: ({ color, focused }) =>
@@ -165,25 +174,6 @@ export default function TabLayout() {
               ) : (
                 <IconSymbol size={28} name="person-outline" color={color} />
               ),
-          }}
-          initialParams={{ user: `${user?.username}` }}
-        />
-        <Tabs.Screen
-          name="announcements"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="explore"
-          options={{
-            href: null,
           }}
         />
       </Tabs>

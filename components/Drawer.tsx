@@ -22,12 +22,12 @@ const groupedItems: Record<string, DrawerItem[]> = {
     {
       label: '主页',
       icon: { name: 'home-outline' },
-      path: '/',
+      path: '/(tabs)/(home)',
     },
     {
       label: '通知',
       icon: { name: 'notifications-outline' },
-      path: '/my/notifications',
+      path: '/(tabs)/(notifications)',
     },
     {
       label: '发现',
@@ -42,7 +42,7 @@ const groupedItems: Record<string, DrawerItem[]> = {
     {
       label: '搜索',
       icon: { name: 'search-outline' },
-      path: '/search',
+      path: '/(tabs)/(search)',
     },
   ],
   system: [

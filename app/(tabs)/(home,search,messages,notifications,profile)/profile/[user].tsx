@@ -1,14 +1,15 @@
+import { Profile } from '@/components/Profile';
 import { useLocalSearchParams } from 'expo-router';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function Profile() {
+export default function ProfilePage() {
   const { user } = useLocalSearchParams();
   const { top } = useSafeAreaInsets();
 
   return (
     <View style={{ paddingTop: top }}>
-      <Text>user: {user}</Text>
+      <Profile user={user} />
     </View>
   );
 }
