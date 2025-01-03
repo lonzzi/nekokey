@@ -1,18 +1,20 @@
 import { isAndroid } from '@/lib/utils/platform';
 import { Image, useImage } from 'expo-image';
 import React from 'react';
-import { ImageStyle, StyleProp } from 'react-native';
+import { ImageStyle, StyleProp, View, ViewStyle } from 'react-native';
 
 const AutoResizingImage = ({
   source,
   height = 24,
   className,
   style,
+  placeholderStyle,
 }: {
   source: { uri: string };
   height?: number;
   className?: string;
   style?: StyleProp<ImageStyle>;
+  placeholderStyle?: StyleProp<ViewStyle>;
 }) => {
   const image = useImage(source.uri, {
     maxHeight: height,
@@ -21,7 +23,16 @@ const AutoResizingImage = ({
     },
   });
 
-  if (!image) return null;
+  if (!image) {
+    return (
+      <View
+        style={[
+          { height, width: height, backgroundColor: '#E5E5E5', borderRadius: 4 },
+          placeholderStyle,
+        ]}
+      />
+    );
+  }
 
   const imageAspectRatio = image.width / image.height;
 

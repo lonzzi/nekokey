@@ -1,3 +1,4 @@
+import { Colors } from '@/constants/Colors';
 import { useNoteUpdated } from '@/hooks/useNoteUpdated';
 import { useMisskeyApi } from '@/lib/api';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -7,13 +8,14 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Image } from 'expo-image';
+import _ from 'lodash';
 import type { Note as NoteType } from 'misskey-js/built/entities';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import AutoResizingImage from './AutoResizingImage';
 import ImageLayoutGrid from './ImageView/ImageLayoutGrid';
-// import ReactionPicker from './ReactionPicker';
+import ReactionPicker from './ReactionPicker';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -23,11 +25,15 @@ interface NoteProps {
   endpoint: string;
 }
 
-const NoteRender = React.memo(({ note }: { note: NoteType }) => {
+const NoteRender = ({ note }: { note: NoteType }) => {
   const { serverInfo } = useAuth();
   const text = note.text;
 
   if (!text) return null;
+
+  const imageStyle = {
+    transform: [{ translateY: 6 }],
+  };
 
   const parts = React.useMemo(() => {
     const customEmojis = note.emojis;
@@ -50,9 +56,8 @@ const NoteRender = React.memo(({ note }: { note: NoteType }) => {
           key={index}
           source={{ uri: emojiUrl }}
           height={20}
-          style={{
-            transform: [{ translateY: 6 }],
-          }}
+          style={imageStyle}
+          placeholderStyle={imageStyle}
         />
       );
     });
@@ -65,26 +70,40 @@ const NoteRender = React.memo(({ note }: { note: NoteType }) => {
       <Text> </Text>
     </>
   );
-});
-NoteRender.displayName = 'NoteRender';
+};
 
 const ReactionViewer = ({
   note,
-  reactions,
   onReaction,
+  disabled,
 }: {
   note: NoteType;
-  reactions: Record<string, number>;
   onReaction: (reaction: string) => void;
+  disabled?: boolean;
 }) => {
   const { serverInfo } = useAuth();
-  const myReaction = note.myReaction;
+  const { reactions, myReaction } = note;
+  const [showAll, setShowAll] = useState(false);
+  const colorScheme = useColorScheme();
+
+  const sortedReactions = React.useMemo(() => {
+    const sorted = Object.entries(reactions)
+      .filter(([, count]) => count > 0)
+      .sort(([, countA], [, countB]) => countB - countA);
+
+    return showAll ? sorted : sorted.slice(0, 10);
+  }, [reactions, showAll]);
+
+  const debouncedReaction = React.useCallback(
+    _.debounce((reaction: string) => {
+      onReaction(reaction);
+    }, 300),
+    [onReaction],
+  );
 
   return (
     <View style={styles.reactions}>
-      {Object.entries(reactions).map(([reaction, count]) => {
-        if (count <= 0) return null;
-
+      {sortedReactions.map(([reaction, count]) => {
         const customEmoji = note.reactionEmojis?.[reaction.slice(1, -1)];
         const localEmoji = getEmoji(serverInfo?.emojis, reaction.slice(1, -1).replace('@.', ''));
 
@@ -93,23 +112,43 @@ const ReactionViewer = ({
             key={reaction}
             style={[
               styles.reactionButton,
-              myReaction === reaction && styles.reactionButtonActive,
+              {
+                backgroundColor: colorScheme === 'dark' ? '#333' : '#f0f0f0',
+              },
               customEmoji && {
                 backgroundColor: 'transparent',
               },
+              myReaction === reaction && {
+                backgroundColor: Colors.common.accentedBg,
+                boxShadow: `0 0 0 1px ${Colors.common.accent} inset`,
+              },
             ]}
-            disabled={!!customEmoji}
-            onPress={() => onReaction(reaction)}
+            disabled={disabled || !!customEmoji}
+            onPress={() => debouncedReaction(reaction)}
           >
             {customEmoji || localEmoji ? (
               <AutoResizingImage source={{ uri: customEmoji || localEmoji || '' }} height={20} />
             ) : (
               <ThemedText>{reaction}</ThemedText>
             )}
-            <ThemedText style={styles.reactionCount}>{count}</ThemedText>
+            <Text
+              style={[styles.reactionCount, { color: colorScheme === 'dark' ? '#999' : '#666' }]}
+            >
+              {count}
+            </Text>
           </Pressable>
         );
       })}
+      {Object.keys(reactions).length > 10 && (
+        <Pressable
+          style={[styles.reactionButton, styles.expandButton]}
+          onPress={() => setShowAll(!showAll)}
+        >
+          <ThemedText style={styles.expandButtonText}>
+            {showAll ? '收起' : `+${Object.keys(reactions).length - 10}`}
+          </ThemedText>
+        </Pressable>
+      )}
     </View>
   );
 };
@@ -151,39 +190,62 @@ const NoteRoot = ({
   endpoint,
   originalNote,
 }: NoteProps & { originalNote?: NoteType }) => {
-  const [reactions, setReactions] = useState(note?.reactions || {});
-  const [myReaction, setMyReaction] = useState(note?.myReaction);
+  const { user } = useAuth();
+  const [noteData, setNoteData] = useState(note);
   const api = useMisskeyApi();
   const queryClient = useQueryClient();
   const colorScheme = useColorScheme();
-  const [, setShowReactionPicker] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+
+  useEffect(() => {
+    setNoteData(note);
+  }, [note]);
 
   useNoteUpdated({
     endpoint,
     note,
-    onReacted: (reaction) => {
-      setReactions((prev) => ({
+    onReacted: (reaction, userId, emoji) => {
+      setNoteData((prev) => ({
         ...prev,
-        [reaction]: (prev[reaction] || 0) + 1,
+        reactions: {
+          ...prev.reactions,
+          [reaction]: (prev.reactions[reaction] || 0) + 1,
+        },
+        reactionEmojis: emoji
+          ? { ...prev.reactionEmojis, [emoji.name]: emoji.url }
+          : prev.reactionEmojis,
       }));
-      setMyReaction(reaction);
+      if (userId === user?.id) {
+        setNoteData((prev) => ({
+          ...prev,
+          myReaction: reaction,
+        }));
+      }
     },
-    onUnreacted: (reaction) => {
-      setReactions((prev) => ({
+    onUnreacted: (reaction, userId) => {
+      setNoteData((prev) => ({
         ...prev,
-        [reaction]: Math.max((prev[reaction] || 0) - 1, 0),
+        reactions: {
+          ...prev.reactions,
+          [reaction]: Math.max((prev.reactions[reaction] || 0) - 1, 0),
+        },
       }));
-      setMyReaction(null);
+      if (userId === user?.id) {
+        setNoteData((prev) => ({
+          ...prev,
+          myReaction: null,
+        }));
+      }
     },
   });
 
   const reactionMutation = useMutation({
     mutationFn: async (reaction: string) => {
-      if (myReaction) {
+      if (noteData.myReaction) {
         await api?.request('notes/reactions/delete', {
           noteId: note.id,
         });
-        if (reaction !== myReaction) {
+        if (reaction !== noteData.myReaction) {
           await api?.request('notes/reactions/create', {
             noteId: note.id,
             reaction,
@@ -194,29 +256,6 @@ const NoteRoot = ({
           noteId: note.id,
           reaction,
         });
-      }
-    },
-    onMutate: (reaction) => {
-      if (myReaction) {
-        setReactions((prev) => ({
-          ...prev,
-          [myReaction]: Math.max((prev[myReaction] || 0) - 1, 0),
-        }));
-        if (reaction !== myReaction) {
-          setReactions((prev) => ({
-            ...prev,
-            [reaction]: (prev[reaction] || 0) + 1,
-          }));
-          setMyReaction(reaction);
-        } else {
-          setMyReaction(null);
-        }
-      } else {
-        setReactions((prev) => ({
-          ...prev,
-          [reaction]: (prev[reaction] || 0) + 1,
-        }));
-        setMyReaction(reaction);
       }
     },
     onSettled: () => {
@@ -299,7 +338,7 @@ const NoteRoot = ({
             <View style={styles.userInfo}>
               <ThemedText numberOfLines={1}>
                 <ThemedText type="defaultSemiBold" style={styles.name}>
-                  {note.user.name}
+                  {note.user.name || note.user.username}
                 </ThemedText>
                 {'  '}
                 <ThemedText style={styles.username}>@{note.user.username}</ThemedText>
@@ -313,7 +352,11 @@ const NoteRoot = ({
           <NoteContent note={note} />
           {renderRenote()}
 
-          <ReactionViewer note={note} reactions={reactions} onReaction={handleReactionSelect} />
+          <ReactionViewer
+            note={noteData}
+            onReaction={handleReactionSelect}
+            disabled={reactionMutation.isPending}
+          />
 
           <View style={styles.actions}>
             <Pressable style={styles.actionButton} onPress={onReply}>
@@ -328,11 +371,11 @@ const NoteRoot = ({
               <Ionicons name="add-outline" size={20} color="#666" />
             </Pressable>
           </View>
-          {/* <ReactionPicker
+          <ReactionPicker
             isVisible={showReactionPicker}
             onClose={() => setShowReactionPicker(false)}
             onEmojiSelect={handleReactionSelect}
-          /> */}
+          />
         </View>
       </View>
     </ThemedView>
@@ -425,17 +468,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginRight: 8,
   },
-  renoteName: {
-    fontSize: 13,
-  },
-  renoteUsername: {
-    fontSize: 13,
-    color: '#666',
-  },
-  renoteText: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
   reactions: {
     marginTop: 8,
     flexDirection: 'row',
@@ -448,15 +480,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: '#f0f0f0',
-  },
-  reactionButtonActive: {
-    backgroundColor: '#e0e0e0',
   },
   reactionCount: {
     marginLeft: 4,
     fontSize: 12,
-    color: '#666',
   },
   renoteHeaderContainer: {
     flexDirection: 'row',
@@ -468,5 +495,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginLeft: 4,
+  },
+  expandButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  expandButtonText: {
+    fontSize: 12,
+    color: '#666',
   },
 });

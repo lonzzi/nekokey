@@ -8,8 +8,8 @@ type NoteUpdatedProps = {
   endpoint: string;
   note: NoteType;
   onDeleted?: () => void;
-  onReacted?: (reaction: string) => void;
-  onUnreacted?: (reaction: string) => void;
+  onReacted?: (reaction: string, userId: string, emoji?: { name: string; url: string }) => void;
+  onUnreacted?: (reaction: string, userId: string) => void;
   onPollVoted?: () => void;
 };
 
@@ -30,8 +30,6 @@ export const useNoteUpdated = ({
 
       if (id !== note.id) return;
 
-      console.log('noteData', noteData);
-
       switch (type) {
         case 'deleted': {
           queryClient.setQueryData([endpoint], (oldData: InfiniteData<NoteType[]>) => {
@@ -46,12 +44,18 @@ export const useNoteUpdated = ({
         }
         case 'reacted': {
           const reaction = body.reaction;
-          onReacted?.(reaction);
+          // type assertion to avoid type error, the type is not completely defined in misskey-js
+          const emoji = body.emoji as unknown as {
+            name: string;
+            url: string;
+          };
+
+          onReacted?.(reaction, body.userId, emoji);
           break;
         }
         case 'unreacted': {
           const reaction = body.reaction;
-          onUnreacted?.(reaction);
+          onUnreacted?.(reaction, body.userId);
           break;
         }
         case 'pollVoted': {

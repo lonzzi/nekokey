@@ -47,7 +47,7 @@ const TIMELINE_CHANNEL_MAP = {
   'notes/user-list-timeline': 'roleTimeline',
 } as const;
 
-const MemoizedNote = memo(Note, (prev, next) => prev.note.id === next.note.id);
+const MemoizedNote = memo(Note);
 
 export type TimelineListRef = {
   scrollToTop: () => void;

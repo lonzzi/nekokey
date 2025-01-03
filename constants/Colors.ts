@@ -41,6 +41,10 @@ export const Colors = {
       backgroundColor: 'rgba(0,0,0,0.8)',
     } satisfies ViewStyle,
   },
+  common: {
+    accent: 'rgb(180, 233, 0)',
+    accentedBg: 'rgba(180, 233, 0, 0.15)',
+  },
 };
 
 export const BlueViewIntensity = 100;
