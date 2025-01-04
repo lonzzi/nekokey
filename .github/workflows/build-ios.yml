@@ -5,6 +5,15 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type (release/development)'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - development
 
 jobs:
   build-ios:
@@ -36,7 +45,7 @@ jobs:
         run: |
           xcodebuild -workspace ios/nekokey.xcworkspace \
             -scheme nekokey \
-            -configuration Release \
+            -configuration ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'development' && 'Debug' || 'Release' }} \
             -archivePath ${{ github.workspace }}/build/nekokey.xcarchive \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
@@ -46,10 +55,10 @@ jobs:
         run: |
           mkdir Payload
           cp -r ${{ github.workspace }}/build/nekokey.xcarchive/Products/Applications/nekokey.app Payload
-          zip -r nekokey-iOS_${{ github.ref_name }}.ipa Payload
+          zip -r nekokey-iOS_${{ github.ref_name }}${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'development' && '-dev' || '' }}.ipa Payload
 
       - name: Upload App Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-release-${{ github.ref_name }}
-          path: nekokey-iOS_${{ github.ref_name }}.ipa
+          name: ios-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'development' && 'development' || 'release' }}-${{ github.ref_name }}
+          path: nekokey-iOS_${{ github.ref_name }}${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'development' && '-dev' || '' }}.ipa
