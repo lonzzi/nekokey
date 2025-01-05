@@ -15,6 +15,7 @@ export interface ImageSource {
   width?: number;
   height?: number;
   thumbRect?: Rect;
+  isSensitive?: boolean;
 }
 
 export type ImageItemProps = ImageViewItemProps & {

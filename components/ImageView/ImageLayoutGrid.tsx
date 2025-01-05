@@ -1,8 +1,11 @@
 import { isAndroid } from '@/lib/utils/platform';
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import React, { useRef, useState } from 'react';
 import {
   Dimensions,
+  GestureResponderEvent,
   Modal,
   StatusBar,
   StyleProp,
@@ -12,6 +15,7 @@ import {
   ViewStyle,
 } from 'react-native';
 
+import { ThemedText } from '../ThemedText';
 import { ImageSource, Rect } from './ImageItem';
 import ImageView from './ImageView';
 
@@ -30,6 +34,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images, style }) => {
   const [imagePositions, setImagePositions] = useState<Array<Rect>>([]);
   const [containerWidth, setContainerWidth] = useState(0);
   const [imageAspectRatio, setImageAspectRatio] = useState(0);
+  const [showSensitive, setShowSensitive] = useState<{ [key: number]: boolean }>({});
 
   const imageRefs = useRef<Array<View | null>>([]);
 
@@ -70,6 +75,21 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images, style }) => {
       default:
         return styles.quadImage;
     }
+  };
+
+  const handlePressImage = (index: number) => {
+    if (images[index].isSensitive && !showSensitive[index]) {
+      setShowSensitive((prev) => ({ ...prev, [index]: true }));
+      return;
+    }
+    setSelectedIndex(index);
+    setModalVisible(true);
+    measureAllImages();
+  };
+
+  const toggleSensitive = (index: number, event: GestureResponderEvent) => {
+    event.stopPropagation();
+    setShowSensitive((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
   return (
@@ -115,20 +135,38 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images, style }) => {
                   },
               ]}
             >
-              <TouchableWithoutFeedback
-                onPress={() => {
-                  setSelectedIndex(index);
-                  setModalVisible(true);
-                  measureAllImages();
-                }}
-              >
-                <Image
-                  source={{ uri: item.uri }}
-                  style={styles.thumbnailImage}
-                  placeholder={{ uri: item.thumbnailUrl }}
-                  contentFit="cover"
-                  placeholderContentFit="cover"
-                />
+              <TouchableWithoutFeedback onPress={() => handlePressImage(index)}>
+                <View style={{ width: '100%', height: '100%' }}>
+                  <Image
+                    source={{ uri: item.uri }}
+                    style={styles.thumbnailImage}
+                    placeholder={{ uri: item.thumbnailUrl }}
+                    contentFit="cover"
+                    placeholderContentFit="cover"
+                  />
+                  {item.isSensitive && !showSensitive[index] && (
+                    <BlurView
+                      intensity={80}
+                      style={StyleSheet.absoluteFill}
+                      experimentalBlurMethod="dimezisBlurView"
+                    >
+                      <View style={styles.sensitiveOverlay}>
+                        <ThemedText style={styles.sensitiveText}>敏感内容</ThemedText>
+                      </View>
+                    </BlurView>
+                  )}
+                  {item.isSensitive && (
+                    <TouchableWithoutFeedback onPress={(e) => toggleSensitive(index, e)}>
+                      <View style={styles.sensitiveButton}>
+                        <Ionicons
+                          name={showSensitive[index] ? 'eye-off' : 'eye'}
+                          size={16}
+                          color="#fff"
+                        />
+                      </View>
+                    </TouchableWithoutFeedback>
+                  )}
+                </View>
               </TouchableWithoutFeedback>
             </View>
           );
@@ -199,6 +237,29 @@ const styles = StyleSheet.create({
     height: '49.5%',
     borderRadius: 8,
     overflow: 'hidden',
+  },
+  sensitiveButton: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  sensitiveOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  sensitiveText: {
+    color: '#fff',
+    fontSize: 14,
   },
 });
 

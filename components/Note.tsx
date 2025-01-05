@@ -176,6 +176,7 @@ const NoteContent = ({ note, size = 'normal' }: { note: NoteType; size?: 'small'
             thumbnailUrl: file.thumbnailUrl,
             width: file.properties.width,
             height: file.properties.height,
+            isSensitive: file.isSensitive,
           }))}
           style={{ marginVertical: 8 }}
         />
