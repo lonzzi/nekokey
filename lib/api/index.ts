@@ -31,6 +31,8 @@ export const initMisskeyClient = (token: string, host: string) => {
   if (!misskeyStream) {
     misskeyStream = new Misskey.Stream(`wss://${cleanHost}`, { token });
   }
+
+  return { misskeyApi, misskeyStream };
 };
 
 export const useMisskeyApi = (): MisskeyApi.APIClient => {

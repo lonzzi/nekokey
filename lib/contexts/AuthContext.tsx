@@ -5,9 +5,8 @@ import type { UserDetailed } from 'misskey-js/built/entities';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 
-import { initMisskeyClient, misskeyApi } from '../api';
+import { initMisskeyClient } from '../api';
 
-// 将类型定义放在一起，便于管理
 interface ServerInfo {
   meta: Misskey.entities.MetaResponse;
   emojis: Misskey.entities.EmojisResponse;
@@ -39,11 +38,11 @@ const STORAGE_KEYS = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(null);
+  const [misskeyApi, setMisskeyApi] = useState<Misskey.api.APIClient | null>(null);
   const queryClient = useQueryClient();
 
   const { data: user, isLoading: isUserLoading } = useQuery({
-    queryKey: ['user', token],
+    queryKey: ['user', misskeyApi],
     queryFn: async () => {
       if (!misskeyApi) return null;
 
@@ -62,12 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    enabled: !!misskeyApi,
     retry: 1,
   });
 
   const { data: serverInfo, isLoading: isServerInfoLoading } = useQuery({
-    queryKey: ['serverInfo', token],
+    queryKey: ['serverInfo', misskeyApi],
     queryFn: async () => {
       if (!misskeyApi) return null;
 
@@ -82,7 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    enabled: !!misskeyApi,
     retry: 1,
   });
 
@@ -91,8 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, newToken);
       await AsyncStorage.setItem(STORAGE_KEYS.SERVER, newServer);
 
-      initMisskeyClient(newToken, newServer);
-      setToken(newToken);
+      const { misskeyApi } = initMisskeyClient(newToken, newServer);
+      setMisskeyApi(misskeyApi);
     } catch (error) {
       console.error('Login failed:', error);
       Alert.alert('Error', 'Failed to save login information');
@@ -108,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA),
       ]);
 
-      setToken(null);
+      setMisskeyApi(null);
       queryClient.clear();
     } catch (error) {
       console.error('Logout failed:', error);
@@ -119,13 +116,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
-      queryClient.invalidateQueries({ queryKey: ['user', token] });
-      queryClient.invalidateQueries({ queryKey: ['serverInfo', token] });
+      queryClient.invalidateQueries({ queryKey: ['user', misskeyApi] });
+      queryClient.invalidateQueries({ queryKey: ['serverInfo', misskeyApi] });
     } catch (error) {
       console.error('Refresh failed:', error);
       Alert.alert('Error', 'Failed to update user information');
     }
-  }, [queryClient, token]);
+  }, [queryClient, misskeyApi]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -136,8 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ]);
 
         if (savedToken && savedServer) {
-          initMisskeyClient(savedToken, savedServer);
-          setToken(savedToken);
+          const { misskeyApi } = initMisskeyClient(savedToken, savedServer);
+          setMisskeyApi(misskeyApi);
         }
       } catch (error) {
         console.error('Init auth failed:', error);
@@ -150,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const contextValue: AuthContextType = {
     user: user ?? null,
     loading: isUserLoading || isServerInfoLoading,
-    loaded: !!token,
+    loaded: !!misskeyApi,
     isAuthenticated: !!user,
     serverInfo: serverInfo ?? null,
     login,
