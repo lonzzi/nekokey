@@ -46,6 +46,7 @@ export default function TabLayout() {
   const onCloseDrawer = useCallback(() => setIsDrawerOpen(false), [setIsDrawerOpen]);
   const { currentIndex } = useTopTabBar();
 
+  const renderDrawerContent = useCallback(() => <DrawerContent />, []);
   const swipeEnabled = currentIndex === 0 && !isSwipeDisabled;
 
   if (!loaded) {
@@ -54,7 +55,7 @@ export default function TabLayout() {
 
   return (
     <Drawer
-      renderDrawerContent={DrawerContent}
+      renderDrawerContent={renderDrawerContent}
       drawerStyle={{ width: Math.min(400, winDim.width * 0.8) }}
       configureGestureHandler={(handler) => {
         if (swipeEnabled) {

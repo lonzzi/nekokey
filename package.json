@@ -23,7 +23,6 @@
     "preset": "jest-expo"
   },
   "dependencies": {
-    "@emoji-mart/data": "^1.2.1",
     "@expo/vector-icons": "^14.0.2",
     "@gorhom/bottom-sheet": "^5.0.6",
     "@react-native-async-storage/async-storage": "1.23.1",
@@ -69,10 +68,11 @@
     "react-native-drawer-layout": "^4.1.1",
     "react-native-gesture-handler": "~2.20.2",
     "react-native-pager-view": "6.5.1",
-    "react-native-reanimated": "~3.16.1",
+    "react-native-reanimated": "~3.16.6",
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0",
     "react-native-svg": "^15.8.0",
+    "react-native-uitextview": "^1.4.0",
     "react-native-web": "~0.19.13",
     "react-native-webview": "13.12.5",
     "tailwindcss": "^3.4.16"
@@ -86,6 +86,7 @@
     "@types/jest": "^29.5.12",
     "@types/react": "~18.3.12",
     "@types/react-test-renderer": "^18.3.0",
+    "babel-plugin-transform-remove-console": "^6.9.4",
     "eslint": "^9.15.0",
     "eslint-plugin-react": "^7.37.2",
     "globals": "^15.12.0",

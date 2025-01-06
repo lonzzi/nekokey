@@ -12,10 +12,10 @@ import _ from 'lodash';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { UITextView } from 'react-native-uitextview';
 
 import AutoResizingImage from './AutoResizingImage';
 import ImageLayoutGrid from './ImageView/ImageLayoutGrid';
-import ReactionPicker from './ReactionPicker';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -165,9 +165,9 @@ const NoteContent = ({ note, size = 'normal' }: { note: NoteType; size?: 'small'
   return (
     <>
       {contentNote ? (
-        <ThemedText style={textStyle}>
+        <UITextView style={textStyle} uiTextView>
           <NoteRender note={contentNote} />
-        </ThemedText>
+        </UITextView>
       ) : null}
       {contentNote?.files?.length && contentNote.files.length > 0 ? (
         <ImageLayoutGrid
@@ -196,7 +196,6 @@ const NoteRoot = ({
   const api = useMisskeyApi();
   const queryClient = useQueryClient();
   const colorScheme = useColorScheme();
-  const [showReactionPicker, setShowReactionPicker] = useState(false);
 
   useEffect(() => {
     setNoteData(note);
@@ -289,7 +288,6 @@ const NoteRoot = ({
 
   const handleReactionSelect = (reaction: string) => {
     reactionMutation.mutate(reaction);
-    setShowReactionPicker(false);
   };
 
   const renderRenote = () => {
@@ -368,15 +366,10 @@ const NoteRoot = ({
               <Ionicons name="repeat-outline" size={20} color="#666" />
             </Pressable>
 
-            <Pressable style={styles.actionButton} onPress={() => setShowReactionPicker(true)}>
+            <Pressable style={styles.actionButton} onPress={() => {}}>
               <Ionicons name="add-outline" size={20} color="#666" />
             </Pressable>
           </View>
-          <ReactionPicker
-            isVisible={showReactionPicker}
-            onClose={() => setShowReactionPicker(false)}
-            onEmojiSelect={handleReactionSelect}
-          />
         </View>
       </View>
     </ThemedView>

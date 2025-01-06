@@ -9,7 +9,7 @@ import { isIOS } from '@/lib/utils/platform';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useScrollToTop } from '@react-navigation/native';
-import { InfiniteData, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import {
   forwardRef,
@@ -58,8 +58,6 @@ export type TimelineListProps = {
   isFocused?: boolean;
 };
 
-const MAX_CACHED_NOTES = 100;
-
 export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
   ({ endpoint, isFocused = true }, ref) => {
     const query = useInfiniteTimelines(endpoint);
@@ -76,7 +74,6 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
     const [newNoteIds, setNewNoteIds] = useState<Set<string>>(new Set());
     const { user } = useAuth();
     const [isOnTop, setIsOnTop] = useState(true);
-    const [cachedNotes, setCachedNotes] = useState<NoteType[]>([]);
 
     const { data, refetch, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
       query;
@@ -98,19 +95,6 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
       onMomentumEnd,
     });
 
-    useEffect(() => {
-      if (isFocused && isOnTop && cachedNotes.length > 0) {
-        queryClient.setQueryData([endpoint], (oldData: InfiniteData<NoteType[]>) => {
-          if (!oldData) return { pages: [cachedNotes], pageParams: [undefined] };
-          return {
-            ...oldData,
-            pages: [[...cachedNotes, ...oldData.pages[0]], ...oldData.pages.slice(1)],
-          };
-        });
-        setCachedNotes([]);
-      }
-    }, [cachedNotes, isFocused, isOnTop]);
-
     const checkForNew = useCallback(() => {
       if (isFetching || !hasNew) {
         return;
@@ -119,16 +103,6 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
     }, [refetch, isFetching, hasNew]);
 
     const scrollToTop = () => {
-      if (cachedNotes.length > 0) {
-        queryClient.setQueryData([endpoint], (oldData: InfiniteData<NoteType[]>) => {
-          if (!oldData) return { pages: [cachedNotes], pageParams: [undefined] };
-          return {
-            ...oldData,
-            pages: [[...cachedNotes, ...oldData.pages[0]], ...oldData.pages.slice(1)],
-          };
-        });
-        setCachedNotes([]);
-      }
       setHasNew(false);
       checkForNew();
       listRef.current?.scrollToOffset({ offset: -topTabBarHeight, animated: true });
@@ -175,28 +149,18 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
     useEffect(() => {
       const channel = stream.useChannel(TIMELINE_CHANNEL_MAP[endpoint] as 'homeTimeline');
 
-      channel.on('note', async (note) => {
-        if (isFocused && isOnTop) {
-          queryClient.setQueryData([endpoint], (oldData: InfiniteData<NoteType[]>) => {
-            if (!oldData) return { pages: [[note]], pageParams: [undefined] };
-            return {
-              ...oldData,
-              pages: [[note, ...oldData.pages[0]], ...oldData.pages.slice(1)],
-            };
-          });
-        } else {
-          setCachedNotes((prev) => {
-            const newCache = [note, ...prev];
-            return newCache.slice(0, MAX_CACHED_NOTES);
-          });
-          setHasNew(true);
-        }
+      channel.on('note', async () => {
+        setHasNew(true);
       });
 
       return () => {
         channel.dispose();
       };
     }, [stream, queryClient, isFocused, isOnTop]);
+
+    useEffect(() => {
+      refetch();
+    }, []);
 
     if (isLoading) {
       return (
@@ -241,9 +205,9 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
             }
           }}
           onEndReachedThreshold={2}
-          maxToRenderPerBatch={isIOS ? 5 : 1}
+          maxToRenderPerBatch={isIOS ? 3 : 1}
           windowSize={9}
-          updateCellsBatchingPeriod={40}
+          updateCellsBatchingPeriod={30}
           removeClippedSubviews={true}
           initialNumToRender={10}
           ListFooterComponent={() =>

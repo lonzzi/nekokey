@@ -3,7 +3,7 @@ import { GlobalTimeline, HomeTimeline, LocalTimeline } from '@/components/Timeli
 import TopTabBar from '@/components/TopTabBar';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { useTopTabBar } from '@/lib/contexts/TopTabBarContext';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 
 const TIMELINE_TABS = [
@@ -42,6 +42,24 @@ export default function HomeScreen() {
     [],
   );
 
+  const timelinePages = useMemo(
+    () =>
+      TIMELINE_TABS.map(({ key, component: TimelineComponent }, index) => {
+        const shouldRender = Math.abs(currentIndex - index) <= 1;
+
+        return (
+          <View key={key} className="flex-1">
+            {shouldRender ? (
+              <TimelineComponent isFocused={currentIndex === index} />
+            ) : (
+              <View style={{ flex: 1 }} />
+            )}
+          </View>
+        );
+      }),
+    [currentIndex],
+  );
+
   return (
     <Pager
       renderTabBar={renderTabBar}
@@ -51,13 +69,7 @@ export default function HomeScreen() {
         }
       }}
     >
-      {TIMELINE_TABS.map(({ key, component: TimelineComponent }, index) => (
-        <View key={key} className="flex-1">
-          {Math.abs(currentIndex - index) <= 1 && (
-            <TimelineComponent isFocused={currentIndex === index} />
-          )}
-        </View>
-      ))}
+      {timelinePages}
     </Pager>
   );
 }
