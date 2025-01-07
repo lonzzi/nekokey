@@ -7,15 +7,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { Image } from 'expo-image';
+import { Image, useImage } from 'expo-image';
 import _ from 'lodash';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
-import { UITextView } from 'react-native-uitextview';
+import {
+  Alert,
+  ImageStyle,
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from 'react-native';
 
 import AutoResizingImage from './AutoResizingImage';
 import ImageLayoutGrid from './ImageView/ImageLayoutGrid';
+import { Mfm } from './Mfm';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -25,51 +34,20 @@ interface NoteProps {
   endpoint: string;
 }
 
-const NoteRender = ({ note }: { note: NoteType }) => {
-  const { serverInfo } = useAuth();
-  const text = note.text;
+const UserAvatar = ({ avatarUrl, style }: { avatarUrl: string; style?: StyleProp<ImageStyle> }) => {
+  const image = useImage(avatarUrl);
 
-  if (!text) return null;
+  if (!image) {
+    return (
+      <View
+        style={[
+          { backgroundColor: Colors.common.loadingBg, borderRadius: 24, width: 48, height: 48 },
+        ]}
+      />
+    );
+  }
 
-  const imageStyle = {
-    transform: [{ translateY: 6 }],
-  };
-
-  const parts = React.useMemo(() => {
-    const customEmojis = note.emojis;
-
-    return text.split(/(:[\w-]+:)/g).map((part, index) => {
-      const emojiMatch = part.match(/^:([\w-]+):$/);
-      if (!emojiMatch) {
-        return <Text key={index}>{part}</Text>;
-      }
-
-      const emojiName = emojiMatch[1].replace('@.', '');
-      const emojiUrl = getEmoji(serverInfo?.emojis, emojiName) || customEmojis?.[emojiMatch[1]];
-
-      if (!emojiUrl) {
-        return <Text key={index}>{part}</Text>;
-      }
-
-      return (
-        <AutoResizingImage
-          key={index}
-          source={{ uri: emojiUrl }}
-          height={20}
-          style={imageStyle}
-          placeholderStyle={imageStyle}
-        />
-      );
-    });
-  }, [text, note.emojis, serverInfo?.emojis]);
-
-  return (
-    <>
-      {parts}
-      {/* Add a space to expand the component height. */}
-      <Text> </Text>
-    </>
-  );
+  return <Image source={{ uri: avatarUrl || '' }} style={style} transition={200} />;
 };
 
 const ReactionViewer = ({
@@ -127,7 +105,7 @@ const ReactionViewer = ({
             onPress={() => debouncedReaction(reaction)}
           >
             {customEmoji || localEmoji ? (
-              <AutoResizingImage source={{ uri: customEmoji || localEmoji || '' }} height={20} />
+              <AutoResizingImage source={{ uri: customEmoji ?? localEmoji }} height={20} />
             ) : (
               <ThemedText>{reaction}</ThemedText>
             )}
@@ -156,6 +134,10 @@ const ReactionViewer = ({
 const NoteContent = ({ note, size = 'normal' }: { note: NoteType; size?: 'small' | 'normal' }) => {
   const isRenote = !!note.renote;
   const contentNote = isRenote ? note.renote : note;
+  const { serverInfo } = useAuth();
+  const emojiUrls = Object.fromEntries(
+    Object.entries(serverInfo?.emojis || {}).map(([, emoji]) => [emoji.name, emoji.url]),
+  );
 
   const textStyle = {
     fontSize: size === 'small' ? 13 : 16,
@@ -164,10 +146,13 @@ const NoteContent = ({ note, size = 'normal' }: { note: NoteType; size?: 'small'
 
   return (
     <>
-      {contentNote ? (
-        <UITextView style={textStyle} uiTextView>
-          <NoteRender note={contentNote} />
-        </UITextView>
+      {contentNote?.text ? (
+        <Mfm
+          style={textStyle}
+          text={contentNote.text}
+          emojiUrls={emojiUrls}
+          author={contentNote.user}
+        />
       ) : null}
       {contentNote?.files?.length && contentNote.files.length > 0 ? (
         <ImageLayoutGrid
@@ -295,10 +280,14 @@ const NoteRoot = ({
     return (
       <ThemedView style={styles.renoteContainer}>
         <View style={styles.renoteUserInfo}>
-          <Image source={{ uri: note.renote.user.avatarUrl || '' }} style={styles.renoteAvatar} />
+          <UserAvatar avatarUrl={note.renote.user.avatarUrl || ''} style={styles.renoteAvatar} />
           <ThemedText numberOfLines={1}>
             <ThemedText type="defaultSemiBold" style={styles.name}>
-              {note.renote?.user.name}
+              <Mfm
+                text={note.renote?.user.name ?? note.renote?.user.username}
+                author={note.renote?.user}
+                emojiUrls={note.renote?.user.emojis}
+              />
             </ThemedText>
             {'  '}
             <ThemedText style={styles.username}>@{note.renote?.user.username}</ThemedText>
@@ -314,7 +303,14 @@ const NoteRoot = ({
     return (
       <View style={styles.renoteHeaderContainer}>
         <Ionicons name="repeat-outline" size={16} color="#666" />
-        <ThemedText style={styles.renoteHeaderText}>{originalNote.user.name} 已转贴</ThemedText>
+        <ThemedText style={styles.renoteHeaderText}>
+          <Mfm
+            text={originalNote.user.name ?? originalNote.user.username}
+            author={originalNote.user}
+            emojiUrls={originalNote.user.emojis}
+          />
+          已转贴
+        </ThemedText>
       </View>
     );
   };
@@ -331,13 +327,17 @@ const NoteRoot = ({
     >
       {renderRenoteHeader()}
       <View style={styles.noteContainer}>
-        <Image source={{ uri: note.user.avatarUrl || '' }} style={styles.avatar} />
+        <UserAvatar avatarUrl={note.user.avatarUrl || ''} style={styles.avatar} />
         <View style={styles.content}>
           <View style={styles.header}>
             <View style={styles.userInfo}>
               <ThemedText numberOfLines={1}>
                 <ThemedText type="defaultSemiBold" style={styles.name}>
-                  {note.user.name || note.user.username}
+                  <Mfm
+                    text={note.user.name ?? note.user.username}
+                    author={note.user}
+                    emojiUrls={note.user.emojis}
+                  />
                 </ThemedText>
                 {'  '}
                 <ThemedText style={styles.username}>@{note.user.username}</ThemedText>
@@ -348,7 +348,7 @@ const NoteRoot = ({
             </ThemedText>
           </View>
 
-          <NoteContent note={note} />
+          <NoteContent note={noteData} />
           {renderRenote()}
 
           <ReactionViewer

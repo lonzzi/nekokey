@@ -17,6 +17,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -74,9 +75,12 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
     const [newNoteIds, setNewNoteIds] = useState<Set<string>>(new Set());
     const { user } = useAuth();
     const [isOnTop, setIsOnTop] = useState(true);
+    const [newNotes, setNewNotes] = useState<NoteType[]>([]);
 
     const { data, refetch, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
       query;
+
+    const allData = useMemo(() => [...newNotes, ...(data || [])], [newNotes, data]);
 
     const scrollHandler = useAnimatedScrollHandler({
       onBeginDrag,
@@ -146,11 +150,21 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
       [],
     );
 
+    const handleRefresh = useCallback(() => {
+      setNewNotes([]);
+      onRefresh();
+    }, [onRefresh]);
+
     useEffect(() => {
       const channel = stream.useChannel(TIMELINE_CHANNEL_MAP[endpoint] as 'homeTimeline');
 
-      channel.on('note', async () => {
-        setHasNew(true);
+      channel.on('note', async (note: NoteType) => {
+        if (isOnTop && !isFetching && isFocused) {
+          setNewNotes((prev) => [note, ...prev]);
+        } else {
+          setHasNew(true);
+          setNewNoteIds((prev) => new Set(prev).add(note.id));
+        }
       });
 
       return () => {
@@ -174,13 +188,13 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
       <>
         <Animated.FlatList
           ref={listRef}
-          data={data}
+          data={allData}
           renderItem={renderItem}
           keyExtractor={(item) => `${item.id}-${user?.id}`}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={onRefresh}
+              onRefresh={handleRefresh}
               progressViewOffset={Platform.OS === 'android' ? topTabBarHeight : 0}
             />
           }
@@ -191,6 +205,10 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
           contentOffset={{ x: 0, y: -topTabBarHeight }}
           scrollIndicatorInsets={{ top: topTabBarHeight, bottom: bottomTabHeight }}
           automaticallyAdjustsScrollIndicatorInsets={false}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+            autoscrollToTopThreshold: 10,
+          }}
           style={[
             styles.container,
             {

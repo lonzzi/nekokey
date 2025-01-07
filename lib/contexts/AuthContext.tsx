@@ -9,7 +9,7 @@ import { initMisskeyClient } from '../api';
 
 interface ServerInfo {
   meta: Misskey.entities.MetaResponse;
-  emojis: Misskey.entities.EmojisResponse;
+  emojis: Misskey.entities.EmojisResponse['emojis'];
 }
 
 interface AuthState {
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           misskeyApi.request('meta', {}),
           misskeyApi.request('emojis', {}),
         ]);
-        return { meta, emojis };
+        return { meta, emojis: emojis.emojis };
       } catch (error) {
         console.error('Failed to fetch server info:', error);
         throw error;

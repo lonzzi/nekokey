@@ -1,3 +1,4 @@
+import { Colors } from '@/constants/Colors';
 import { isAndroid } from '@/lib/utils/platform';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -197,7 +198,7 @@ const styles = StyleSheet.create({
   thumbnailImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#E5E5E5',
+    backgroundColor: Colors.common.loadingBg,
   },
   imageContainer: {
     flexDirection: 'row',

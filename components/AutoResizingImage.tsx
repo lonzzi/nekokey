@@ -1,3 +1,4 @@
+import { Colors } from '@/constants/Colors';
 import { isAndroid } from '@/lib/utils/platform';
 import { Image, useImage } from 'expo-image';
 import React from 'react';
@@ -27,7 +28,7 @@ const AutoResizingImage = ({
     return (
       <View
         style={[
-          { height, width: height, backgroundColor: '#E5E5E5', borderRadius: 4 },
+          { height, width: height, backgroundColor: Colors.common.loadingBg, borderRadius: 4 },
           placeholderStyle,
         ]}
       />
@@ -49,6 +50,7 @@ const AutoResizingImage = ({
       contentFit="contain"
       cachePolicy="memory-disk"
       recyclingKey={source.uri}
+      transition={200}
     />
   );
 };
