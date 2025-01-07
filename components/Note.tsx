@@ -37,17 +37,13 @@ interface NoteProps {
 const UserAvatar = ({ avatarUrl, style }: { avatarUrl: string; style?: StyleProp<ImageStyle> }) => {
   const image = useImage(avatarUrl);
 
-  if (!image) {
-    return (
-      <View
-        style={[
-          { backgroundColor: Colors.common.loadingBg, borderRadius: 24, width: 48, height: 48 },
-        ]}
-      />
-    );
-  }
-
-  return <Image source={{ uri: avatarUrl || '' }} style={style} transition={200} />;
+  return (
+    <Image
+      source={{ uri: avatarUrl || '' }}
+      style={[style, !image && { backgroundColor: Colors.common.loadingBg }]}
+      transition={200}
+    />
+  );
 };
 
 const ReactionViewer = ({
