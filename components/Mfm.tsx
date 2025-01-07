@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { getEmoji } from '@/lib/utils/emojis';
+import { isIOS } from '@/lib/utils/platform';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import React from 'react';
@@ -485,7 +486,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
               <AutoResizingImage
                 source={{ uri: emojiUrl }}
                 height={height}
-                style={{ transform: [{ translateY: (height || 24) / 2 }] }}
+                style={{ transform: [{ translateY: (height || 24) / (isIOS ? 2 : 4) }] }}
               />
             </Text>
           );

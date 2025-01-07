@@ -1,7 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import { isAndroid } from '@/lib/utils/platform';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import React, { useRef, useState } from 'react';
 import {
@@ -144,17 +143,12 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images, style }) => {
                     placeholder={{ uri: item.thumbnailUrl }}
                     contentFit="cover"
                     placeholderContentFit="cover"
+                    blurRadius={item.isSensitive && !showSensitive[index] ? 50 : 0}
                   />
                   {item.isSensitive && !showSensitive[index] && (
-                    <BlurView
-                      intensity={80}
-                      style={StyleSheet.absoluteFill}
-                      experimentalBlurMethod="dimezisBlurView"
-                    >
-                      <View style={styles.sensitiveOverlay}>
-                        <ThemedText style={styles.sensitiveText}>敏感内容</ThemedText>
-                      </View>
-                    </BlurView>
+                    <View style={styles.sensitiveOverlay}>
+                      <ThemedText style={styles.sensitiveText}>敏感内容</ThemedText>
+                    </View>
                   )}
                   {item.isSensitive && (
                     <TouchableWithoutFeedback onPress={(e) => toggleSensitive(index, e)}>
@@ -252,7 +246,11 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   sensitiveOverlay: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',

@@ -85,6 +85,8 @@ const ReactionViewer = ({
         const customEmoji = note.reactionEmojis?.[reaction.slice(1, -1)];
         const localEmoji = getEmoji(serverInfo?.emojis, reaction.slice(1, -1).replace('@.', ''));
 
+        const isCustomEmoji = !localEmoji && !!customEmoji;
+
         return (
           <Pressable
             key={reaction}
@@ -93,19 +95,19 @@ const ReactionViewer = ({
               {
                 backgroundColor: colorScheme === 'dark' ? '#333' : '#f0f0f0',
               },
-              customEmoji && {
+              isCustomEmoji && {
                 backgroundColor: 'transparent',
               },
               myReaction === reaction && {
                 backgroundColor: Colors.common.accentedBg,
-                boxShadow: `0 0 0 1px ${Colors.common.accent} inset`,
+                borderColor: Colors.common.accent,
               },
             ]}
-            disabled={disabled || !!customEmoji}
+            disabled={disabled || isCustomEmoji}
             onPress={() => debouncedReaction(reaction)}
           >
             {customEmoji || localEmoji ? (
-              <AutoResizingImage source={{ uri: customEmoji ?? localEmoji }} height={20} />
+              <AutoResizingImage source={{ uri: localEmoji ?? customEmoji }} height={20} />
             ) : (
               <ThemedText>{reaction}</ThemedText>
             )}
@@ -181,6 +183,7 @@ const NoteRoot = ({
   const api = useMisskeyApi();
   const queryClient = useQueryClient();
   const colorScheme = useColorScheme();
+  const { serverInfo } = useAuth();
 
   useEffect(() => {
     setNoteData(note);
@@ -196,9 +199,10 @@ const NoteRoot = ({
           ...prev.reactions,
           [reaction]: (prev.reactions[reaction] || 0) + 1,
         },
-        reactionEmojis: emoji
-          ? { ...prev.reactionEmojis, [emoji.name]: emoji.url }
-          : prev.reactionEmojis,
+        reactionEmojis:
+          emoji && !getEmoji(serverInfo?.emojis, emoji?.name.slice(1, -1).replace('@.', ''))
+            ? { ...prev.reactionEmojis, [emoji.name]: emoji.url }
+            : prev.reactionEmojis,
       }));
       if (userId === user?.id) {
         setNoteData((prev) => ({
@@ -474,6 +478,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   reactionCount: {
     marginLeft: 4,
