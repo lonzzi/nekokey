@@ -35,7 +35,11 @@ interface NoteProps {
 }
 
 const UserAvatar = ({ avatarUrl, style }: { avatarUrl: string; style?: StyleProp<ImageStyle> }) => {
-  const image = useImage(avatarUrl);
+  const image = useImage(avatarUrl, {
+    onError: (error) => {
+      console.log(error);
+    },
+  });
 
   return (
     <Image
