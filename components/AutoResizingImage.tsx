@@ -2,7 +2,7 @@ import { Colors } from '@/constants/Colors';
 import { isAndroid } from '@/lib/utils/platform';
 import { Image, useImage } from 'expo-image';
 import React from 'react';
-import { ImageStyle, StyleProp } from 'react-native';
+import { ImageStyle, StyleProp, View, ViewStyle } from 'react-native';
 
 const AutoResizingImage = ({
   source,
@@ -24,10 +24,10 @@ const AutoResizingImage = ({
 
   if (!image) {
     return (
-      <Image
+      <View
         style={[
           { height, width: height, backgroundColor: Colors.common.loadingBg, borderRadius: 4 },
-          style,
+          style as ViewStyle,
         ]}
       />
     );
@@ -44,9 +44,9 @@ const AutoResizingImage = ({
     <Image
       className={className}
       source={source}
+      placeholder={image}
       style={[imageSize, style]}
       contentFit="contain"
-      cachePolicy="memory-disk"
       recyclingKey={source.uri}
       transition={200}
     />
