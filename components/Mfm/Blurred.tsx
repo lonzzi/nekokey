@@ -1,15 +1,19 @@
-import { BlurView } from 'expo-blur';
+import { BlurTint, BlurView } from 'expo-blur';
 import { ReactNode, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 type BlurredProps = {
   intensity?: number;
-  tint?: 'light' | 'dark';
+  tint?: BlurTint;
   children: ReactNode;
 };
 
 export const Blurred = ({ intensity = 8, tint = 'light', children }: BlurredProps) => {
   const [isVisible, setIsVisible] = useState(true);
+  const colorScheme = useColorScheme();
+  const [textDimensions, setTextDimensions] = useState({ width: 0, height: 0 });
+
+  const offset = 10;
 
   const handleBlurViewClick = () => {
     setIsVisible(false);
@@ -17,13 +21,26 @@ export const Blurred = ({ intensity = 8, tint = 'light', children }: BlurredProp
 
   return (
     <View style={styles.container}>
-      {children}
+      <Text onLayout={(e) => setTextDimensions(e.nativeEvent.layout)}>{children}</Text>
       {isVisible && (
         <BlurView
           intensity={intensity}
           tint={tint}
-          style={styles.blurView}
+          style={[
+            styles.blurView,
+            {
+              backgroundColor:
+                colorScheme === 'dark' ? 'rgba(150, 150, 150, 0.04)' : 'rgba(255, 255, 255, 0.4)',
+            },
+            {
+              width: textDimensions.width + offset + 4,
+              height: textDimensions.height + offset,
+              top: -offset / 2,
+              left: -(offset + 4) / 2,
+            },
+          ]}
           onTouchEnd={handleBlurViewClick}
+          experimentalBlurMethod="dimezisBlurView"
         />
       )}
     </View>
@@ -33,8 +50,8 @@ export const Blurred = ({ intensity = 8, tint = 'light', children }: BlurredProp
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    overflow: 'hidden',
-    borderRadius: 8,
+    transform: [{ translateY: 4 }],
+    borderRadius: 10,
   },
   blurView: {
     position: 'absolute',

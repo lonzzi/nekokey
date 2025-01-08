@@ -1,30 +1,47 @@
+import { isAndroid } from '@/lib/utils/platform';
 import { Highlight, themes } from 'prism-react-renderer';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextStyle, View } from 'react-native';
 
 export const CodeHighlighter = ({ code, language }: { code: string; language?: string }) => {
+  const [height, setHeight] = useState(100);
+
   return (
     <Highlight theme={themes.github} code={code} language={language || 'javascript'}>
       {({ style, tokens, getLineProps, getTokenProps }) => (
-        <ScrollView
-          horizontal
-          style={[styles.container, { backgroundColor: style.backgroundColor || '#1e1e1e' }]}
-        >
-          <View>
-            {tokens.map((line, i) => (
-              <View {...getLineProps({ line, key: i })} style={styles.line} key={i}>
-                {line.map((token, key) => {
-                  const { style: tokenStyle, children } = getTokenProps({ token, key });
+        <Text>
+          {isAndroid && (
+            <>
+              <Text>{'\n'}</Text>
+              <Text style={{ lineHeight: height }}>{'\n'}</Text>
+            </>
+          )}
+          <ScrollView
+            horizontal
+            style={[styles.container, { backgroundColor: style.backgroundColor || '#1e1e1e' }]}
+          >
+            <View
+              onLayout={(e) => {
+                const { height } = e.nativeEvent.layout;
+                setHeight(height);
+              }}
+            >
+              {tokens.map((line, i) => (
+                <View {...getLineProps({ line, key: i })} style={styles.line} key={i}>
+                  {line.map((token, key) => {
+                    const { style: tokenStyle, children } = getTokenProps({ token, key });
 
-                  return (
-                    <Text key={key} style={[styles.token, tokenStyle as TextStyle]}>
-                      {children}
-                    </Text>
-                  );
-                })}
-              </View>
-            ))}
-          </View>
-        </ScrollView>
+                    return (
+                      <Text key={key} style={[styles.token, tokenStyle as TextStyle]}>
+                        {children}
+                      </Text>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        </Text>
       )}
     </Highlight>
   );
@@ -34,7 +51,8 @@ const styles = StyleSheet.create({
   container: {
     padding: 10,
     borderRadius: 8,
-    marginVertical: 10,
+    width: '100%',
+    display: 'flex',
   },
   line: {
     flexDirection: 'row',

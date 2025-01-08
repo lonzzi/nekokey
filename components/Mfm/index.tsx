@@ -1,10 +1,19 @@
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { getEmoji } from '@/lib/utils/emojis';
+import { isAndroid } from '@/lib/utils/platform';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import React from 'react';
-import { Linking, StyleProp, StyleSheet, Text, TextStyle, View } from 'react-native';
+import {
+  Linking,
+  StyleProp,
+  StyleSheet,
+  Text,
+  TextStyle,
+  useColorScheme,
+  View,
+} from 'react-native';
 import Animated, {
   useAnimatedStyle,
   withRepeat,
@@ -37,6 +46,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
   parsedNodes = null,
 }) => {
   const { serverInfo } = useAuth();
+  const colorScheme = useColorScheme();
 
   const shouldNyaize = nyaize ? (nyaize === 'respect' ? author?.isCat : false) : false;
 
@@ -67,7 +77,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
         if (shouldNyaize) {
           text = Misskey.nyaize(text);
         }
-        return <Text>{text}</Text>;
+        return <Text style={{ color: Colors[colorScheme ?? 'light'].text }}>{text}</Text>;
       }
 
       case 'url':
@@ -112,11 +122,14 @@ export const Mfm: React.FC<MfmRenderProps> = ({
 
       case 'center':
         return (
-          <View style={styles.center}>
-            {node.children.map((child, i) => (
-              <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
-            ))}
-          </View>
+          <>
+            <Text>{'\n'}</Text>
+            <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'center' }}>
+              {node.children.map((child, i) => (
+                <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+              ))}
+            </View>
+          </>
         );
 
       case 'small':
@@ -130,11 +143,14 @@ export const Mfm: React.FC<MfmRenderProps> = ({
 
       case 'quote':
         return (
-          <View style={styles.quote}>
-            {node.children.map((child, i) => (
-              <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
-            ))}
-          </View>
+          <>
+            <Text>{'\n'}</Text>
+            <View style={styles.quote}>
+              {node.children.map((child, i) => (
+                <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+              ))}
+            </View>
+          </>
         );
 
       case 'search':
@@ -183,7 +199,16 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             );
           case 'blur':
             return (
-              <Blurred intensity={20}>
+              <Blurred
+                intensity={18}
+                tint={
+                  colorScheme === 'dark'
+                    ? isAndroid
+                      ? 'systemMaterialDark'
+                      : 'dark'
+                    : 'systemChromeMaterialLight'
+                }
+              >
                 {node.children.map((child, i) => (
                   <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                 ))}
@@ -203,7 +228,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
           case 'x4': {
             const scale = node.props.name === 'x2' ? 2 : node.props.name === 'x3' ? 3 : 4;
             return (
-              <Text style={{ fontSize: 16 * scale, lineHeight: 16 * scale }}>
+              <Text style={{ fontSize: 16 * scale, lineHeight: 20 * scale }}>
                 {node.children.map((child, i) => (
                   <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                 ))}
@@ -216,7 +241,11 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             return (
               <Text style={{ color: `#${color}` }}>
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>
+                    {React.cloneElement(renderNode(child) as React.ReactElement, {
+                      style: { color: 'inherit' },
+                    })}
+                  </React.Fragment>
                 ))}
               </Text>
             );
@@ -532,7 +561,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
   };
 
   return (
-    <Text style={[style]} selectable>
+    <Text style={[style, { color: Colors[colorScheme ?? 'light'].text }]} selectable>
       {nodes.map((node, i) => (
         <React.Fragment key={i}>{renderNode(node)}</React.Fragment>
       ))}
@@ -573,6 +602,7 @@ const styles = StyleSheet.create({
     paddingLeft: 8,
     marginLeft: 8,
     marginVertical: 4,
+    flex: 1,
   },
   search: {
     flexDirection: 'row',
@@ -608,8 +638,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     paddingHorizontal: 4,
     paddingVertical: 2,
-    marginVertical: 2,
     borderRadius: 3,
+    transform: [{ translateY: 6 }],
   },
   mathInline: {
     backgroundColor: '#f8f8f8',
