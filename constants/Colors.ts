@@ -45,6 +45,7 @@ export const Colors = {
     accent: 'rgb(180, 233, 0)',
     accentedBg: 'rgba(180, 233, 0, 0.15)',
     loadingBg: '#E5E5E5',
+    hashtag: 'rgb(255, 145, 86)',
   },
 };
 

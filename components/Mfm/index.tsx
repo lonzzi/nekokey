@@ -1,6 +1,6 @@
+import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { getEmoji } from '@/lib/utils/emojis';
-import { isIOS } from '@/lib/utils/platform';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import React from 'react';
@@ -12,7 +12,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import AutoResizingImage from './AutoResizingImage';
+import { Blurred } from './Blurred';
+import { CodeHighlighter } from './CodeHighlighter';
+import { CustomEmoji } from './CustomEmoji';
+import { RubyText } from './RubyText';
 
 interface MfmRenderProps {
   text: string;
@@ -136,12 +139,19 @@ export const Mfm: React.FC<MfmRenderProps> = ({
 
       case 'search':
         return (
-          <Text
-            style={styles.search}
-            onPress={() => Linking.openURL(`https://google.com/search?q=${node.props.query}`)}
-          >
-            🔍 {node.props.query}
-          </Text>
+          <View style={styles.search}>
+            <Text style={styles.searchText}>🔍 {node.props.query}</Text>
+            <Text
+              style={styles.searchButton}
+              onPress={() =>
+                Linking.openURL(
+                  `https://www.google.com/search?q=${encodeURIComponent(node.props.query)}`,
+                )
+              }
+            >
+              Google
+            </Text>
+          </View>
         );
 
       case 'plain':
@@ -173,11 +183,11 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             );
           case 'blur':
             return (
-              <Text style={[styles.blur, { opacity: 0.5 }]}>
+              <Blurred intensity={20}>
                 {node.children.map((child, i) => (
                   <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                 ))}
-              </Text>
+              </Blurred>
             );
           case 'rainbow': {
             return (
@@ -193,7 +203,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
           case 'x4': {
             const scale = node.props.name === 'x2' ? 2 : node.props.name === 'x3' ? 3 : 4;
             return (
-              <Text style={{ fontSize: 16 * scale }}>
+              <Text style={{ fontSize: 16 * scale, lineHeight: 16 * scale }}>
                 {node.children.map((child, i) => (
                   <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                 ))}
@@ -249,12 +259,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                 text = Misskey.nyaize(text);
               }
               const [base, ruby] = text.split(' ');
-              return (
-                <View>
-                  <Text style={styles.rubyText}>{base}</Text>
-                  <Text style={styles.rubyAnnotation}>{ruby}</Text>
-                </View>
-              );
+              return <RubyText base={base} ruby={ruby} />;
             }
             return null;
           }
@@ -294,6 +299,22 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                   <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                 ))}
               </Animated.Text>
+            );
+          }
+          case 'flip': {
+            const transform =
+              node.props.args.h && node.props.args.v
+                ? [{ scaleX: -1 }, { scaleY: -1 }]
+                : node.props.args.v
+                  ? [{ scaleY: -1 }]
+                  : [{ scaleX: -1 }];
+
+            return (
+              <View style={{ transform: transform }}>
+                {node.children.map((child, i) => (
+                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                ))}
+              </View>
             );
           }
           case 'jelly':
@@ -462,36 +483,39 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                 return null;
             }
           }
+
           default:
             return null;
         }
       }
 
       case 'inlineCode':
-        return <Text style={styles.inlineCode}>{node.props.code}</Text>;
+        return (
+          <View style={styles.inlineCode}>
+            <Text
+              style={{
+                fontFamily: 'monospace',
+              }}
+            >
+              {node.props.code}
+            </Text>
+          </View>
+        );
+
+      case 'blockCode':
+        return <CodeHighlighter code={node.props.code} />;
 
       case 'mathInline':
-        return <Text style={styles.mathInline}>{node.props.formula}</Text>;
+        return (
+          <View style={styles.mathInline}>
+            <Text style={{ fontFamily: 'monospace' }}>{node.props.formula}</Text>
+          </View>
+        );
 
       case 'emojiCode': {
         const emojiUrl =
           emojiUrls[node.props.name] ?? getEmoji(serverInfo?.emojis, node.props.name);
-        const fontSize = (style as TextStyle)?.fontSize;
-        const height = fontSize === 16 ? 24 : (fontSize ?? 24);
-        if (emojiUrl) {
-          // 0 width character to prevent layout shift
-          return (
-            <Text>
-              {'\u200B'}
-              <AutoResizingImage
-                source={{ uri: emojiUrl }}
-                height={height}
-                style={{ transform: [{ translateY: (height || 24) / (isIOS ? 2 : 4) }] }}
-              />
-            </Text>
-          );
-        }
-        return <Text>:{node.props.name}:</Text>;
+        return <CustomEmoji emojiName={node.props.name} emojiUrl={emojiUrl} style={style} />;
       }
 
       case 'unicodeEmoji':
@@ -525,7 +549,7 @@ const styles = StyleSheet.create({
     color: '#2196F3',
   },
   hashtag: {
-    color: '#2196F3',
+    color: Colors.common.hashtag,
   },
   bold: {
     fontWeight: 'bold',
@@ -551,8 +575,25 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f0f0f0',
+    padding: 8,
+    borderRadius: 8,
+    marginVertical: 4,
+  },
+  searchText: {
+    flex: 1,
     color: '#2196F3',
-    textDecorationLine: 'underline',
+  },
+  searchButton: {
+    backgroundColor: '#2196F3',
+    color: 'white',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    marginLeft: 8,
   },
   plain: {
     fontFamily: 'System',
@@ -563,18 +604,14 @@ const styles = StyleSheet.create({
   monospace: {
     fontFamily: 'monospace',
   },
-  blur: {
-    opacity: 0.5,
-  },
   inlineCode: {
-    fontFamily: 'monospace',
     backgroundColor: '#f0f0f0',
     paddingHorizontal: 4,
     paddingVertical: 2,
+    marginVertical: 2,
     borderRadius: 3,
   },
   mathInline: {
-    fontFamily: 'monospace',
     backgroundColor: '#f8f8f8',
   },
   emoji: {
@@ -589,16 +626,6 @@ const styles = StyleSheet.create({
   },
   rainbow: {
     backgroundColor: 'transparent',
-  },
-  rubyText: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  rubyAnnotation: {
-    fontSize: 10,
-    lineHeight: 12,
-    textAlign: 'center',
-    color: '#666',
   },
   unixtime: {
     flexDirection: 'row',
