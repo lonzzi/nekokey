@@ -1,6 +1,6 @@
 import { isAndroid } from '@/lib/utils/platform';
 import { Highlight, themes } from 'prism-react-renderer';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextStyle, View } from 'react-native';
 
 export const CodeHighlighter = ({ code, language }: { code: string; language?: string }) => {

@@ -19,15 +19,17 @@ export const TwEmoji: React.FC<EmojiProps> = ({ text, height = 20, offset = 0 })
 
   if (url) {
     return (
-      <Image
-        source={{ uri: url }}
-        style={{
-          height,
-          width: height,
-          transform: [{ translateY: calculateEmojiTranslateY(height) + offset }],
-        }}
-        contentFit="contain"
-      />
+      <Text>
+        <Image
+          source={{ uri: url }}
+          style={{
+            height,
+            width: height,
+            transform: [{ translateY: calculateEmojiTranslateY(height) + offset }],
+          }}
+          contentFit="contain"
+        />
+      </Text>
     );
   }
 

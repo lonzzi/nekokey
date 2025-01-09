@@ -10,6 +10,7 @@ import {
   StyleProp,
   StyleSheet,
   Text,
+  TextProps,
   TextStyle,
   useColorScheme,
   View,
@@ -27,7 +28,7 @@ import { CustomEmoji } from './CustomEmoji';
 import { RubyText } from './RubyText';
 import { TwEmoji } from './TwEmoji';
 
-interface MfmRenderProps {
+type MfmRenderProps = {
   text: string;
   style?: StyleProp<TextStyle>;
   emojiUrls?: Record<string, string>;
@@ -36,7 +37,8 @@ interface MfmRenderProps {
   rootScale?: number;
   nyaize?: boolean | 'respect';
   parsedNodes?: mfm.MfmNode[] | null;
-}
+  isName?: boolean;
+} & TextProps;
 
 const IMAGE_SCALE = 1.5;
 
@@ -47,6 +49,8 @@ export const Mfm: React.FC<MfmRenderProps> = ({
   author,
   nyaize = false,
   parsedNodes = null,
+  isName = false,
+  ...props
 }) => {
   const { serverInfo } = useAuth();
   const colorScheme = useColorScheme();
@@ -57,7 +61,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
 
   const fontSize = StyleSheet.flatten(style)?.fontSize ?? 16;
   // const lineHeight = StyleSheet.flatten(style)?.lineHeight ?? 24;
-  const emojiHeight = fontSize * IMAGE_SCALE;
+  const emojiHeight = isName ? fontSize : fontSize * IMAGE_SCALE;
 
   const safeParseFloat = (str: unknown): number | null => {
     if (typeof str !== 'string' || str === '') return null;
@@ -308,7 +312,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
               const [base, ruby] = text.split(' ');
               return <RubyText base={base} ruby={ruby} />;
             }
-            return null;
+            return <></>;
           }
           case 'unixtime': {
             const child = node.children[0];
@@ -401,12 +405,12 @@ export const Mfm: React.FC<MfmRenderProps> = ({
               <View
                 style={{
                   transform: [{ scaleX: x }, { scaleY: y }],
+                  // backgroundColor: 'red',
                 }}
               >
                 {node.children.map((child, i) => (
                   <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                 ))}
-                <Text>{'\u200B'}</Text>
               </View>
             );
           }
@@ -608,7 +612,14 @@ export const Mfm: React.FC<MfmRenderProps> = ({
       case 'emojiCode': {
         const emojiUrl =
           emojiUrls[node.props.name] ?? getEmoji(serverInfo?.emojis, node.props.name);
-        return <CustomEmoji emojiName={node.props.name} emojiUrl={emojiUrl} height={emojiHeight} />;
+        return (
+          <CustomEmoji
+            emojiName={node.props.name}
+            emojiUrl={emojiUrl}
+            height={emojiHeight}
+            isName={isName}
+          />
+        );
       }
 
       case 'unicodeEmoji':
@@ -625,7 +636,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
   };
 
   return (
-    <Text style={[style, { color: Colors[colorScheme ?? 'light'].text }]} selectable>
+    <Text style={[style, { color: Colors[colorScheme ?? 'light'].text }]} selectable {...props}>
       {nodes.map((node, i) => (
         <React.Fragment key={i}>{renderNode(node)}</React.Fragment>
       ))}

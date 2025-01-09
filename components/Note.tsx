@@ -3,6 +3,7 @@ import { useNoteUpdated } from '@/hooks/useNoteUpdated';
 import { useMisskeyApi } from '@/lib/api';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { getEmoji } from '@/lib/utils/emojis';
+import { isAndroid } from '@/lib/utils/platform';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -172,6 +173,42 @@ const NoteContent = ({ note, size = 'normal' }: { note: NoteType; size?: 'small'
   );
 };
 
+const UserHeader = ({ note, showTime = true }: { note: NoteType; showTime?: boolean }) => {
+  return (
+    <View
+      style={[showTime ? styles.header : { flexDirection: 'row', flex: 1, alignItems: 'center' }]}
+    >
+      <View style={styles.userInfo}>
+        <Text
+          style={{
+            transform: [{ translateY: isAndroid ? -2.5 : 0 }],
+            height: 20,
+          }}
+        >
+          <ThemedText type="defaultSemiBold" style={[styles.name]}>
+            <Mfm
+              text={note.user.name ?? note.user.username}
+              author={note.user}
+              emojiUrls={note.user.emojis}
+              isName
+            />
+          </ThemedText>
+          <ThemedText style={styles.username} numberOfLines={1}>
+            @{note.user.username}
+          </ThemedText>
+        </Text>
+      </View>
+      {showTime ? (
+        <View>
+          <ThemedText style={styles.time}>
+            {formatDistanceToNow(new Date(note.createdAt), { locale: zhCN, addSuffix: true })}
+          </ThemedText>
+        </View>
+      ) : null}
+    </View>
+  );
+};
+
 const NoteRoot = ({
   note,
   onReply,
@@ -285,17 +322,7 @@ const NoteRoot = ({
       <ThemedView style={styles.renoteContainer}>
         <View style={styles.renoteUserInfo}>
           <UserAvatar avatarUrl={note.renote.user.avatarUrl || ''} style={styles.renoteAvatar} />
-          <ThemedText numberOfLines={1}>
-            <ThemedText type="defaultSemiBold" style={styles.name}>
-              <Mfm
-                text={note.renote?.user.name ?? note.renote?.user.username}
-                author={note.renote?.user}
-                emojiUrls={note.renote?.user.emojis}
-              />
-            </ThemedText>
-            {'  '}
-            <ThemedText style={styles.username}>@{note.renote?.user.username}</ThemedText>
-          </ThemedText>
+          <UserHeader note={note.renote} showTime={false} />
         </View>
         <NoteContent note={note.renote} size="small" />
       </ThemedView>
@@ -312,6 +339,8 @@ const NoteRoot = ({
             text={originalNote.user.name ?? originalNote.user.username}
             author={originalNote.user}
             emojiUrls={originalNote.user.emojis}
+            style={styles.renoteHeaderText}
+            isName
           />
           已转贴
         </ThemedText>
@@ -333,25 +362,7 @@ const NoteRoot = ({
       <View style={styles.noteContainer}>
         <UserAvatar avatarUrl={note.user.avatarUrl || ''} style={styles.avatar} />
         <View style={styles.content}>
-          <View style={styles.header}>
-            <View style={styles.userInfo}>
-              <ThemedText numberOfLines={1}>
-                <ThemedText type="defaultSemiBold" style={styles.name}>
-                  <Mfm
-                    text={note.user.name ?? note.user.username}
-                    author={note.user}
-                    emojiUrls={note.user.emojis}
-                  />
-                </ThemedText>
-                {'  '}
-                <ThemedText style={styles.username}>@{note.user.username}</ThemedText>
-              </ThemedText>
-            </View>
-            <ThemedText style={styles.time}>
-              {formatDistanceToNow(new Date(note.createdAt), { locale: zhCN, addSuffix: true })}
-            </ThemedText>
-          </View>
-
+          <UserHeader note={noteData} />
           <NoteContent note={noteData} />
           {renderRenote()}
 
@@ -418,8 +429,8 @@ const styles = StyleSheet.create({
   userInfo: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
     marginRight: 8,
+    overflow: 'hidden',
   },
   name: {
     fontSize: 14,
