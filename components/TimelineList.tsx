@@ -66,7 +66,7 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
     const bottomTabHeight = useBottomTabBarHeight();
     const colorScheme = useColorScheme();
     const { onBeginDrag, onScroll, onEndDrag, onMomentumEnd } = useScrollHandlers();
-    const { refreshing, onRefresh } = useRefresh(query);
+    const { refreshing, onRefresh } = useRefresh(query.refetch);
     const stream = useMisskeyStream();
     const queryClient = useQueryClient();
     const listRef = useRef<FlatList>(null);
@@ -80,7 +80,12 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
     const { data, refetch, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
       query;
 
-    const allData = useMemo(() => [...newNotes, ...(data || [])], [newNotes, data]);
+    const allData = useMemo(() => {
+      const uniqueMap = new Map<string, NoteType>();
+      newNotes.forEach((note) => uniqueMap.set(note.id, note));
+      data?.forEach((note) => uniqueMap.set(note.id, note));
+      return Array.from(uniqueMap.values());
+    }, [newNotes, data]);
 
     const scrollHandler = useAnimatedScrollHandler({
       onBeginDrag,

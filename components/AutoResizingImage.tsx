@@ -1,5 +1,4 @@
 import { Colors } from '@/constants/Colors';
-import { isAndroid } from '@/lib/utils/platform';
 import { Image, useImage } from 'expo-image';
 import React from 'react';
 import { ImageStyle, StyleProp, View, ViewStyle } from 'react-native';
@@ -16,7 +15,6 @@ const AutoResizingImage = ({
   style?: StyleProp<ImageStyle>;
 }) => {
   const image = useImage(source.uri, {
-    maxHeight: height,
     onError: (error) => {
       console.log(error);
     },
@@ -36,8 +34,8 @@ const AutoResizingImage = ({
   const imageAspectRatio = image.width / image.height;
 
   const imageSize = {
-    width: isAndroid ? imageAspectRatio * height : image.width,
-    height: isAndroid ? height : image.height,
+    width: imageAspectRatio * height,
+    height: height,
   };
 
   return (
