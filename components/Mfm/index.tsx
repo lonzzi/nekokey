@@ -25,6 +25,7 @@ import { Blurred } from './Blurred';
 import { CodeHighlighter } from './CodeHighlighter';
 import { CustomEmoji } from './CustomEmoji';
 import { RubyText } from './RubyText';
+import { TwEmoji } from './TwEmoji';
 
 interface MfmRenderProps {
   text: string;
@@ -36,6 +37,8 @@ interface MfmRenderProps {
   nyaize?: boolean | 'respect';
   parsedNodes?: mfm.MfmNode[] | null;
 }
+
+const IMAGE_SCALE = 1.5;
 
 export const Mfm: React.FC<MfmRenderProps> = ({
   text,
@@ -51,6 +54,10 @@ export const Mfm: React.FC<MfmRenderProps> = ({
   const shouldNyaize = nyaize ? (nyaize === 'respect' ? author?.isCat : false) : false;
 
   const nodes = parsedNodes ?? mfm.parse(text);
+
+  const fontSize = StyleSheet.flatten(style)?.fontSize ?? 16;
+  // const lineHeight = StyleSheet.flatten(style)?.lineHeight ?? 24;
+  const emojiHeight = fontSize * IMAGE_SCALE;
 
   const safeParseFloat = (str: unknown): number | null => {
     if (typeof str !== 'string' || str === '') return null;
@@ -84,6 +91,19 @@ export const Mfm: React.FC<MfmRenderProps> = ({
         return (
           <Text style={styles.url} onPress={() => Linking.openURL(node.props.url)}>
             {node.props.url}
+          </Text>
+        );
+
+      case 'link':
+        return (
+          <Text style={styles.url} onPress={() => Linking.openURL(node.props.url)}>
+            {node.children.map((child, i) => (
+              <React.Fragment key={i}>
+                {React.cloneElement((renderNode(child) as React.ReactElement) ?? <></>, {
+                  style: { color: 'inherit' },
+                })}
+              </React.Fragment>
+            ))}
           </Text>
         );
 
@@ -170,15 +190,6 @@ export const Mfm: React.FC<MfmRenderProps> = ({
           </View>
         );
 
-      case 'plain':
-        return (
-          <Text style={styles.plain}>
-            {node.children.map((child, i) => (
-              <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
-            ))}
-          </Text>
-        );
-
       case 'fn': {
         switch (node.props.name) {
           case 'serif':
@@ -200,7 +211,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
           case 'blur':
             return (
               <Blurred
-                intensity={18}
+                intensity={16}
                 tint={
                   colorScheme === 'dark'
                     ? isAndroid
@@ -228,7 +239,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
           case 'x4': {
             const scale = node.props.name === 'x2' ? 2 : node.props.name === 'x3' ? 3 : 4;
             return (
-              <Text style={{ fontSize: 16 * scale, lineHeight: 20 * scale }}>
+              <Text style={{ fontSize: fontSize * scale, lineHeight: fontSize * scale }}>
                 {node.children.map((child, i) => (
                   <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                 ))}
@@ -242,7 +253,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
               <Text style={{ color: `#${color}` }}>
                 {node.children.map((child, i) => (
                   <React.Fragment key={i}>
-                    {React.cloneElement(renderNode(child) as React.ReactElement, {
+                    {React.cloneElement((renderNode(child) as React.ReactElement) ?? <></>, {
                       style: { color: 'inherit' },
                     })}
                   </React.Fragment>
@@ -254,11 +265,18 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             let color = validColor(node.props.args.color);
             color = color ?? 'f00';
             return (
-              <Text style={{ backgroundColor: `#${color}` }}>
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
-                ))}
-              </Text>
+              <View
+                style={{
+                  backgroundColor: `#${color}`,
+                  transform: [{ scale: 1.1 }, { translateX: 1 }, { translateY: 1 }],
+                }}
+              >
+                <Text>
+                  {node.children.map((child, i) => (
+                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  ))}
+                </Text>
+              </View>
             );
           }
           case 'border': {
@@ -346,6 +364,52 @@ export const Mfm: React.FC<MfmRenderProps> = ({
               </View>
             );
           }
+          case 'rotate': {
+            const angle = safeParseFloat(node.props.args.deg) ?? 90;
+            return (
+              <View
+                style={{
+                  transform: [{ rotate: `${angle}deg` }],
+                }}
+              >
+                {node.children.map((child, i) => (
+                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                ))}
+              </View>
+            );
+          }
+          case 'position': {
+            const x = safeParseFloat(node.props.args.x) ?? 0;
+            const y = safeParseFloat(node.props.args.y) ?? 0;
+            return (
+              <View
+                style={{
+                  transform: [{ translateX: x * fontSize }, { translateY: y * fontSize }],
+                  zIndex: 1,
+                }}
+              >
+                {node.children.map((child, i) => (
+                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                ))}
+              </View>
+            );
+          }
+          case 'scale': {
+            const x = Math.min(safeParseFloat(node.props.args.x) ?? 1, 5);
+            const y = Math.min(safeParseFloat(node.props.args.y) ?? 1, 5);
+            return (
+              <View
+                style={{
+                  transform: [{ scaleX: x }, { scaleY: y }],
+                }}
+              >
+                {node.children.map((child, i) => (
+                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                ))}
+                <Text>{'\u200B'}</Text>
+              </View>
+            );
+          }
           case 'jelly':
           case 'twitch':
           case 'shake':
@@ -358,7 +422,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             switch (node.props.name) {
               case 'shake': {
                 return (
-                  <Animated.Text
+                  <Animated.View
                     style={useAnimatedStyle(() => ({
                       transform: [
                         {
@@ -377,13 +441,13 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                     {node.children.map((child, i) => (
                       <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                     ))}
-                  </Animated.Text>
+                  </Animated.View>
                 );
               }
 
               case 'spin': {
                 return (
-                  <Animated.Text
+                  <Animated.View
                     style={useAnimatedStyle(() => ({
                       transform: [
                         {
@@ -395,13 +459,13 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                     {node.children.map((child, i) => (
                       <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                     ))}
-                  </Animated.Text>
+                  </Animated.View>
                 );
               }
 
               case 'jump': {
                 return (
-                  <Animated.Text
+                  <Animated.View
                     style={useAnimatedStyle(() => ({
                       transform: [
                         {
@@ -419,13 +483,13 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                     {node.children.map((child, i) => (
                       <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                     ))}
-                  </Animated.Text>
+                  </Animated.View>
                 );
               }
 
               case 'bounce': {
                 return (
-                  <Animated.Text
+                  <Animated.View
                     style={useAnimatedStyle(() => ({
                       transform: [
                         {
@@ -444,13 +508,13 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                     {node.children.map((child, i) => (
                       <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                     ))}
-                  </Animated.Text>
+                  </Animated.View>
                 );
               }
 
               case 'jelly': {
                 return (
-                  <Animated.Text
+                  <Animated.View
                     style={useAnimatedStyle(() => ({
                       transform: [
                         {
@@ -469,13 +533,13 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                     {node.children.map((child, i) => (
                       <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                     ))}
-                  </Animated.Text>
+                  </Animated.View>
                 );
               }
 
               case 'twitch': {
                 return (
-                  <Animated.Text
+                  <Animated.View
                     style={useAnimatedStyle(() => ({
                       transform: [
                         {
@@ -504,7 +568,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                     {node.children.map((child, i) => (
                       <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                     ))}
-                  </Animated.Text>
+                  </Animated.View>
                 );
               }
 
@@ -544,11 +608,11 @@ export const Mfm: React.FC<MfmRenderProps> = ({
       case 'emojiCode': {
         const emojiUrl =
           emojiUrls[node.props.name] ?? getEmoji(serverInfo?.emojis, node.props.name);
-        return <CustomEmoji emojiName={node.props.name} emojiUrl={emojiUrl} style={style} />;
+        return <CustomEmoji emojiName={node.props.name} emojiUrl={emojiUrl} height={emojiHeight} />;
       }
 
       case 'unicodeEmoji':
-        return <Text style={styles.unicodeEmoji}>{node.props.emoji}</Text>;
+        return <TwEmoji text={node.props.emoji} offset={-2} />;
 
       default:
         if (node.children) {
@@ -624,9 +688,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 4,
     marginLeft: 8,
-  },
-  plain: {
-    fontFamily: 'System',
   },
   serif: {
     fontFamily: 'serif',

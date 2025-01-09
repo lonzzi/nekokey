@@ -1,6 +1,6 @@
 import { BlurTint, BlurView } from 'expo-blur';
 import { ReactNode, useState } from 'react';
-import { StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 
 type BlurredProps = {
   intensity?: number;
@@ -20,30 +20,31 @@ export const Blurred = ({ intensity = 8, tint = 'light', children }: BlurredProp
   };
 
   return (
-    <View style={styles.container}>
-      <Text onLayout={(e) => setTextDimensions(e.nativeEvent.layout)}>{children}</Text>
-      {isVisible && (
-        <BlurView
-          intensity={intensity}
-          tint={tint}
-          style={[
-            styles.blurView,
-            {
-              backgroundColor:
-                colorScheme === 'dark' ? 'rgba(150, 150, 150, 0.04)' : 'rgba(255, 255, 255, 0.4)',
-            },
-            {
-              width: textDimensions.width + offset + 4,
-              height: textDimensions.height + offset,
-              top: -offset / 2,
-              left: -(offset + 4) / 2,
-            },
-          ]}
-          onTouchEnd={handleBlurViewClick}
-          experimentalBlurMethod="dimezisBlurView"
-        />
-      )}
-    </View>
+    <TouchableOpacity onPress={handleBlurViewClick} activeOpacity={1}>
+      <View style={styles.container}>
+        <Text onLayout={(e) => setTextDimensions(e.nativeEvent.layout)}>{children}</Text>
+        {isVisible && (
+          <BlurView
+            intensity={intensity}
+            tint={tint}
+            style={[
+              styles.blurView,
+              {
+                backgroundColor:
+                  colorScheme === 'dark' ? 'rgba(150, 150, 150, 0.04)' : 'rgba(255, 255, 255, 0.4)',
+              },
+              {
+                width: textDimensions.width + offset + 4,
+                height: textDimensions.height + offset,
+                top: -offset / 2,
+                left: -(offset + 4) / 2,
+              },
+            ]}
+            experimentalBlurMethod="dimezisBlurView"
+          />
+        )}
+      </View>
+    </TouchableOpacity>
   );
 };
 

@@ -1,5 +1,7 @@
 import * as Misskey from 'misskey-js';
 
+import { isIOS } from './platform';
+
 const emojiCache = new Map<string, string | null>();
 
 export const getEmoji = (
@@ -16,4 +18,8 @@ export const getEmoji = (
   emojiCache.set(name, result ?? null);
 
   return result;
+};
+
+export const calculateEmojiTranslateY = (height: number) => {
+  return height / (isIOS ? 2 : 4);
 };
