@@ -182,7 +182,7 @@ const UserHeader = ({ note, showTime = true }: { note: NoteType; showTime?: bool
         <Text
           style={{
             transform: [{ translateY: isAndroid ? -2.5 : 0 }],
-            height: 20,
+            height: 24,
           }}
         >
           <ThemedText type="defaultSemiBold" style={[styles.name]}>

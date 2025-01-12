@@ -60,7 +60,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
   const nodes = parsedNodes ?? mfm.parse(text);
 
   const fontSize = StyleSheet.flatten(style)?.fontSize ?? 16;
-  // const lineHeight = StyleSheet.flatten(style)?.lineHeight ?? 24;
+  const lineHeight = StyleSheet.flatten(style)?.lineHeight ?? 24;
   const emojiHeight = isName ? fontSize : fontSize * IMAGE_SCALE;
 
   const safeParseFloat = (str: unknown): number | null => {
@@ -149,9 +149,11 @@ export const Mfm: React.FC<MfmRenderProps> = ({
           <>
             <Text>{'\n'}</Text>
             <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'center' }}>
-              {node.children.map((child, i) => (
-                <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
-              ))}
+              <Text style={{ fontSize, lineHeight }}>
+                {node.children.map((child, i) => (
+                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                ))}
+              </Text>
             </View>
           </>
         );
@@ -167,14 +169,13 @@ export const Mfm: React.FC<MfmRenderProps> = ({
 
       case 'quote':
         return (
-          <>
-            <Text>{'\n'}</Text>
-            <View style={styles.quote}>
+          <View style={styles.quote}>
+            <Text style={{ fontSize, lineHeight }}>
               {node.children.map((child, i) => (
                 <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
               ))}
-            </View>
-          </>
+            </Text>
+          </View>
         );
 
       case 'search':
@@ -577,12 +578,12 @@ export const Mfm: React.FC<MfmRenderProps> = ({
               }
 
               default:
-                return null;
+                return <></>;
             }
           }
 
           default:
-            return null;
+            return <></>;
         }
       }
 
@@ -676,7 +677,6 @@ const styles = StyleSheet.create({
     borderLeftColor: '#888',
     paddingLeft: 8,
     marginLeft: 8,
-    marginVertical: 4,
     flex: 1,
   },
   search: {
@@ -709,7 +709,7 @@ const styles = StyleSheet.create({
   inlineCode: {
     backgroundColor: '#f0f0f0',
     paddingHorizontal: 4,
-    paddingVertical: 2,
+    paddingVertical: 1,
     borderRadius: 3,
     transform: [{ translateY: 6 }],
   },
