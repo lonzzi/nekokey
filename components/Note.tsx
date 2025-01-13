@@ -135,8 +135,6 @@ const ReactionViewer = ({
 };
 
 const NoteContent = ({ note, size = 'normal' }: { note: NoteType; size?: 'small' | 'normal' }) => {
-  const isRenote = !!note.renote;
-  const contentNote = isRenote ? note.renote : note;
   const { serverInfo } = useAuth();
   const emojiUrls = Object.fromEntries(
     Object.entries(serverInfo?.emojis || {}).map(([, emoji]) => [emoji.name, emoji.url]),
@@ -149,17 +147,12 @@ const NoteContent = ({ note, size = 'normal' }: { note: NoteType; size?: 'small'
 
   return (
     <>
-      {contentNote?.text ? (
-        <Mfm
-          style={textStyle}
-          text={contentNote.text}
-          emojiUrls={emojiUrls}
-          author={contentNote.user}
-        />
+      {note?.text ? (
+        <Mfm style={textStyle} text={note.text} emojiUrls={emojiUrls} author={note.user} />
       ) : null}
-      {contentNote?.files?.length && contentNote.files.length > 0 ? (
+      {note?.files?.length && note.files.length > 0 ? (
         <ImageLayoutGrid
-          images={contentNote.files.map((file) => ({
+          images={note.files.map((file) => ({
             uri: file.url,
             thumbnailUrl: file.thumbnailUrl,
             width: file.properties.width,
@@ -206,6 +199,41 @@ const UserHeader = ({ note, showTime = true }: { note: NoteType; showTime?: bool
         </View>
       ) : null}
     </View>
+  );
+};
+
+const ReplyTo = ({ note }: { note: NoteType }) => {
+  if (!note.reply) return null;
+  const reply = note.reply;
+  const colorScheme = useColorScheme();
+
+  return (
+    <ThemedView
+      style={[
+        styles.replyWrapper,
+        {
+          borderBottomColor: colorScheme === 'dark' ? '#111' : '#eee',
+        },
+      ]}
+    >
+      <View style={styles.noteContainer}>
+        <View style={styles.avatarContainer}>
+          <UserAvatar avatarUrl={reply.user.avatarUrl || ''} style={styles.avatar} />
+          <View
+            style={[
+              styles.replyLine,
+              {
+                backgroundColor: colorScheme === 'dark' ? '#333' : '#ddd',
+              },
+            ]}
+          />
+        </View>
+        <View style={styles.content}>
+          <UserHeader note={reply} />
+          <NoteContent note={reply} />
+        </View>
+      </View>
+    </ThemedView>
   );
 };
 
@@ -360,7 +388,21 @@ const NoteRoot = ({
     >
       {renderRenoteHeader()}
       <View style={styles.noteContainer}>
-        <UserAvatar avatarUrl={note.user.avatarUrl || ''} style={styles.avatar} />
+        <View style={styles.avatarContainer}>
+          <UserAvatar avatarUrl={note.user.avatarUrl || ''} style={styles.avatar} />
+          {note.reply ? (
+            <View
+              style={[
+                styles.replyLine,
+                {
+                  height: 10,
+                  backgroundColor: colorScheme === 'dark' ? '#333' : '#ddd',
+                  transform: [{ translateY: -58 }],
+                },
+              ]}
+            />
+          ) : null}
+        </View>
         <View style={styles.content}>
           <UserHeader note={noteData} />
           <NoteContent note={noteData} />
@@ -392,16 +434,19 @@ const NoteRoot = ({
 };
 
 export function Note({ note, onReply, endpoint }: NoteProps) {
-  const isOnlyRenote = !!note.renote && !note.text;
-  const currentNote = isOnlyRenote && note.renote ? note.renote : note;
+  const isRenote = !!note.renote && !note.text;
+  const currentNote = isRenote && note.renote ? note.renote : note;
 
   return (
-    <NoteRoot
-      note={currentNote}
-      onReply={onReply}
-      endpoint={endpoint}
-      originalNote={isOnlyRenote ? note : undefined}
-    />
+    <ThemedView>
+      {currentNote.reply && <ReplyTo note={currentNote} />}
+      <NoteRoot
+        note={currentNote}
+        onReply={onReply}
+        endpoint={endpoint}
+        originalNote={isRenote ? note : undefined}
+      />
+    </ThemedView>
   );
 }
 
@@ -515,5 +560,20 @@ const styles = StyleSheet.create({
   expandButtonText: {
     fontSize: 12,
     color: '#666',
+  },
+  replyWrapper: {
+    paddingTop: 8,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+  },
+  replyLine: {
+    width: 2,
+    // zIndex: 1,
+    height: '100%',
+    position: 'absolute',
+    top: 48, // avatar height
+    bottom: 0,
+    left: 23,
   },
 });
