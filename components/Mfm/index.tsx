@@ -40,8 +40,6 @@ type MfmRenderProps = {
   isName?: boolean;
 } & TextProps;
 
-const IMAGE_SCALE = 1.5;
-
 export const Mfm: React.FC<MfmRenderProps> = ({
   text,
   style,
@@ -61,7 +59,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
 
   const fontSize = StyleSheet.flatten(style)?.fontSize ?? 16;
   const lineHeight = StyleSheet.flatten(style)?.lineHeight ?? 24;
-  const emojiHeight = isName ? fontSize : fontSize * IMAGE_SCALE;
+  const emojiHeight = isName ? fontSize : lineHeight;
 
   const safeParseFloat = (str: unknown): number | null => {
     if (typeof str !== 'string' || str === '') return null;
@@ -101,13 +99,19 @@ export const Mfm: React.FC<MfmRenderProps> = ({
       case 'link':
         return (
           <Text style={styles.url} onPress={() => Linking.openURL(node.props.url)}>
-            {node.children.map((child, i) => (
-              <React.Fragment key={i}>
-                {React.cloneElement((renderNode(child) as React.ReactElement) ?? <></>, {
-                  style: { color: 'inherit' },
-                })}
-              </React.Fragment>
-            ))}
+            {node.children.map((child, i) => {
+              const renderedNode = renderNode(child);
+              if (React.isValidElement(renderedNode)) {
+                return (
+                  <React.Fragment key={i}>
+                    {React.cloneElement(renderedNode as React.ReactElement, {
+                      style: { color: 'inherit' },
+                    })}
+                  </React.Fragment>
+                );
+              }
+              return <React.Fragment key={i}>{renderedNode}</React.Fragment>;
+            })}
           </Text>
         );
 
@@ -147,7 +151,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
       case 'center':
         return (
           <>
-            <Text>{'\n'}</Text>
+            {nodes[0].type === 'center' ? <></> : <Text>{'\n'}</Text>}
             <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'center' }}>
               <Text style={{ fontSize, lineHeight }}>
                 {node.children.map((child, i) => (
@@ -167,16 +171,20 @@ export const Mfm: React.FC<MfmRenderProps> = ({
           </Text>
         );
 
-      case 'quote':
+      case 'quote': {
         return (
-          <View style={styles.quote}>
-            <Text style={{ fontSize, lineHeight }}>
-              {node.children.map((child, i) => (
-                <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
-              ))}
-            </Text>
-          </View>
+          <>
+            {nodes[0].type === 'quote' ? <></> : <Text>{'\n'}</Text>}
+            <View style={styles.quote}>
+              <Text style={{ fontSize, lineHeight }}>
+                {node.children.map((child, i) => (
+                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                ))}
+              </Text>
+            </View>
+          </>
         );
+      }
 
       case 'search':
         return (
@@ -256,13 +264,19 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             color = color ?? 'f00';
             return (
               <Text style={{ color: `#${color}` }}>
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>
-                    {React.cloneElement((renderNode(child) as React.ReactElement) ?? <></>, {
-                      style: { color: 'inherit' },
-                    })}
-                  </React.Fragment>
-                ))}
+                {node.children.map((child, i) => {
+                  const renderedNode = renderNode(child);
+                  if (React.isValidElement(renderedNode)) {
+                    return (
+                      <React.Fragment key={i}>
+                        {React.cloneElement(renderedNode as React.ReactElement, {
+                          style: { color: 'inherit' },
+                        })}
+                      </React.Fragment>
+                    );
+                  }
+                  return <React.Fragment key={i}>{renderedNode}</React.Fragment>;
+                })}
               </Text>
             );
           }
@@ -406,7 +420,6 @@ export const Mfm: React.FC<MfmRenderProps> = ({
               <View
                 style={{
                   transform: [{ scaleX: x }, { scaleY: y }],
-                  // backgroundColor: 'red',
                 }}
               >
                 {node.children.map((child, i) => (
@@ -601,7 +614,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
         );
 
       case 'blockCode':
-        return <CodeHighlighter code={node.props.code} />;
+        return <CodeHighlighter code={node.props.code} isFirst={nodes[0].type === 'blockCode'} />;
 
       case 'mathInline':
         return (
@@ -624,7 +637,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
       }
 
       case 'unicodeEmoji':
-        return <TwEmoji text={node.props.emoji} offset={-2} />;
+        return <TwEmoji text={node.props.emoji} offset={-2.5} height={(lineHeight * 5) / 6} />;
 
       default:
         if (node.children) {
@@ -632,7 +645,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
           ));
         }
-        return null;
+        return <></>;
     }
   };
 
@@ -673,6 +686,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   quote: {
+    width: '100%',
     borderLeftWidth: 3,
     borderLeftColor: '#888',
     paddingLeft: 8,
