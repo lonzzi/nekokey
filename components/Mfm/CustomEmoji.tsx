@@ -8,12 +8,12 @@ export const CustomEmoji = ({
   emojiName,
   emojiUrl,
   height,
-  isName = false,
+  plain = false,
 }: {
   emojiName: string;
   emojiUrl: string;
   height: number;
-  isName?: boolean;
+  plain?: boolean;
 }) => {
   if (emojiUrl) {
     // 0 width character to prevent layout shift
@@ -28,7 +28,7 @@ export const CustomEmoji = ({
               {
                 translateY:
                   calculateEmojiTranslateY(height) +
-                  (isName ? (isAndroid ? -(height * 0.2) : -5) : 0),
+                  (plain ? (isAndroid ? -(height * 0.2) : -5) : 0),
               },
             ],
           }}

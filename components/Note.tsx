@@ -183,7 +183,7 @@ const UserHeader = ({ note, showTime = true }: { note: NoteType; showTime?: bool
               text={note.user.name ?? note.user.username}
               author={note.user}
               emojiUrls={note.user.emojis}
-              isName
+              plain
             />
           </ThemedText>
           <ThemedText style={styles.username} numberOfLines={1}>
@@ -368,7 +368,7 @@ const NoteRoot = ({
             author={originalNote.user}
             emojiUrls={originalNote.user.emojis}
             style={styles.renoteHeaderText}
-            isName
+            plain
           />
           已转贴
         </ThemedText>

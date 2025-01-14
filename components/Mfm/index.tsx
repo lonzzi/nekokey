@@ -30,6 +30,7 @@ import { TwEmoji } from './TwEmoji';
 
 type MfmRenderProps = {
   text: string;
+  plain?: boolean;
   style?: StyleProp<TextStyle>;
   emojiUrls?: Record<string, string>;
   author?: Misskey.entities.UserLite;
@@ -37,17 +38,16 @@ type MfmRenderProps = {
   rootScale?: number;
   nyaize?: boolean | 'respect';
   parsedNodes?: mfm.MfmNode[] | null;
-  isName?: boolean;
 } & TextProps;
 
 export const Mfm: React.FC<MfmRenderProps> = ({
   text,
   style,
+  plain = false,
   emojiUrls = {},
   author,
   nyaize = false,
   parsedNodes = null,
-  isName = false,
   ...props
 }) => {
   const { serverInfo } = useAuth();
@@ -55,11 +55,11 @@ export const Mfm: React.FC<MfmRenderProps> = ({
 
   const shouldNyaize = nyaize ? (nyaize === 'respect' ? author?.isCat : false) : false;
 
-  const nodes = parsedNodes ?? mfm.parse(text);
+  const nodes = parsedNodes ?? (plain ? mfm.parseSimple : mfm.parse)(text);
 
   const fontSize = StyleSheet.flatten(style)?.fontSize ?? 16;
   const lineHeight = StyleSheet.flatten(style)?.lineHeight ?? 24;
-  const emojiHeight = isName ? fontSize : lineHeight;
+  const emojiHeight = plain ? fontSize : lineHeight;
 
   const safeParseFloat = (str: unknown): number | null => {
     if (typeof str !== 'string' || str === '') return null;
@@ -631,7 +631,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             emojiName={node.props.name}
             emojiUrl={emojiUrl}
             height={emojiHeight}
-            isName={isName}
+            plain={plain}
           />
         );
       }
