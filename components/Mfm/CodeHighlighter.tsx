@@ -3,22 +3,13 @@ import { Highlight, themes } from 'prism-react-renderer';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextStyle, View } from 'react-native';
 
-export const CodeHighlighter = ({
-  code,
-  language,
-  isFirst = false,
-}: {
-  code: string;
-  language?: string;
-  isFirst?: boolean;
-}) => {
+export const CodeHighlighter = ({ code, language }: { code: string; language?: string }) => {
   const [height, setHeight] = useState(100);
 
   return (
     <Highlight theme={themes.github} code={code} language={language || 'javascript'}>
       {({ style, tokens, getLineProps, getTokenProps }) => (
         <Text>
-          {!isFirst && <Text>{'\n'}</Text>}
           {isAndroid && <Text style={{ lineHeight: height }}>{'\n'}</Text>}
           <ScrollView
             horizontal

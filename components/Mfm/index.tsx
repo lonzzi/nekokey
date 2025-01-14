@@ -25,6 +25,7 @@ import Animated, {
 import { Blurred } from './Blurred';
 import { CodeHighlighter } from './CodeHighlighter';
 import { CustomEmoji } from './CustomEmoji';
+import { Quote } from './Quote';
 import { RubyText } from './RubyText';
 import { TwEmoji } from './TwEmoji';
 
@@ -39,6 +40,11 @@ type MfmRenderProps = {
   nyaize?: boolean | 'respect';
   parsedNodes?: mfm.MfmNode[] | null;
 } & TextProps;
+
+const needsNewline = (node: mfm.MfmNode | null) => {
+  if (!node) return false;
+  return !['quote', 'center', 'blockCode'].includes(node.type);
+};
 
 export const Mfm: React.FC<MfmRenderProps> = ({
   text,
@@ -79,7 +85,10 @@ export const Mfm: React.FC<MfmRenderProps> = ({
     return c.match(/^[0-9a-f]{3,6}$/i) ? c : null;
   };
 
-  const renderNode = (node: mfm.MfmNode): React.ReactNode => {
+  const renderNode = (node: mfm.MfmNode, index: number, nodes: mfm.MfmNode[]): React.ReactNode => {
+    const prevNode = index > 0 ? nodes[index - 1] : null;
+    // const nextNode = index < nodes.length - 1 ? nodes[index + 1] : null;
+
     switch (node.type) {
       case 'text': {
         let text = node.props.text.replace(/(\r\n|\n|\r)/g, '\n');
@@ -100,7 +109,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
         return (
           <Text style={styles.url} onPress={() => Linking.openURL(node.props.url)}>
             {node.children.map((child, i) => {
-              const renderedNode = renderNode(child);
+              const renderedNode = renderNode(child, i, node.children);
               if (React.isValidElement(renderedNode)) {
                 return (
                   <React.Fragment key={i}>
@@ -125,7 +134,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
         return (
           <Text style={styles.bold}>
             {node.children.map((child, i) => (
-              <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+              <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
             ))}
           </Text>
         );
@@ -134,7 +143,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
         return (
           <Text style={styles.italic}>
             {node.children.map((child, i) => (
-              <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+              <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
             ))}
           </Text>
         );
@@ -143,30 +152,37 @@ export const Mfm: React.FC<MfmRenderProps> = ({
         return (
           <Text style={styles.strike}>
             {node.children.map((child, i) => (
-              <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+              <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
             ))}
           </Text>
         );
 
-      case 'center':
+      case 'center': {
         return (
           <>
-            {nodes[0].type === 'center' ? <></> : <Text>{'\n'}</Text>}
-            <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'center' }}>
-              <Text style={{ fontSize, lineHeight }}>
+            {needsNewline(prevNode) ? <Text>{'\n'}</Text> : <></>}
+            <View
+              style={{
+                width: '100%',
+                flexDirection: 'row',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ fontSize, lineHeight, textAlign: 'center' }}>
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                 ))}
               </Text>
             </View>
           </>
         );
+      }
 
       case 'small':
         return (
           <Text style={styles.small}>
             {node.children.map((child, i) => (
-              <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+              <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
             ))}
           </Text>
         );
@@ -174,14 +190,12 @@ export const Mfm: React.FC<MfmRenderProps> = ({
       case 'quote': {
         return (
           <>
-            {nodes[0].type === 'quote' ? <></> : <Text>{'\n'}</Text>}
-            <View style={styles.quote}>
-              <Text style={{ fontSize, lineHeight }}>
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
-                ))}
-              </Text>
-            </View>
+            {needsNewline(prevNode) ? <Text>{'\n'}</Text> : <></>}
+            <Quote style={style}>
+              {node.children.map((child, i) => (
+                <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
+              ))}
+            </Quote>
           </>
         );
       }
@@ -209,7 +223,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             return (
               <Text style={styles.serif}>
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                 ))}
               </Text>
             );
@@ -217,7 +231,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             return (
               <Text style={styles.monospace}>
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                 ))}
               </Text>
             );
@@ -234,7 +248,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                 }
               >
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                 ))}
               </Blurred>
             );
@@ -242,7 +256,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             return (
               <Text style={styles.rainbow}>
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                 ))}
               </Text>
             );
@@ -254,7 +268,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             return (
               <Text style={{ fontSize: fontSize * scale, lineHeight: fontSize * scale }}>
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                 ))}
               </Text>
             );
@@ -265,7 +279,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             return (
               <Text style={{ color: `#${color}` }}>
                 {node.children.map((child, i) => {
-                  const renderedNode = renderNode(child);
+                  const renderedNode = renderNode(child, i, node.children);
                   if (React.isValidElement(renderedNode)) {
                     return (
                       <React.Fragment key={i}>
@@ -292,7 +306,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
               >
                 <Text>
                   {node.children.map((child, i) => (
-                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                    <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                   ))}
                 </Text>
               </View>
@@ -312,7 +326,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             return (
               <View style={style}>
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                 ))}
               </View>
             );
@@ -362,7 +376,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                 ]}
               >
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                 ))}
               </Animated.Text>
             );
@@ -378,7 +392,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
             return (
               <View style={{ transform: transform }}>
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                 ))}
               </View>
             );
@@ -392,7 +406,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                 }}
               >
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                 ))}
               </View>
             );
@@ -408,7 +422,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                 }}
               >
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                 ))}
               </View>
             );
@@ -423,7 +437,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                 }}
               >
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                 ))}
               </View>
             );
@@ -457,7 +471,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                     }))}
                   >
                     {node.children.map((child, i) => (
-                      <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                      <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                     ))}
                   </Animated.View>
                 );
@@ -475,7 +489,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                     }))}
                   >
                     {node.children.map((child, i) => (
-                      <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                      <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                     ))}
                   </Animated.View>
                 );
@@ -499,7 +513,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                     }))}
                   >
                     {node.children.map((child, i) => (
-                      <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                      <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                     ))}
                   </Animated.View>
                 );
@@ -524,7 +538,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                     }))}
                   >
                     {node.children.map((child, i) => (
-                      <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                      <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                     ))}
                   </Animated.View>
                 );
@@ -549,7 +563,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                     }))}
                   >
                     {node.children.map((child, i) => (
-                      <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                      <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                     ))}
                   </Animated.View>
                 );
@@ -584,7 +598,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
                     }))}
                   >
                     {node.children.map((child, i) => (
-                      <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                      <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
                     ))}
                   </Animated.View>
                 );
@@ -614,7 +628,12 @@ export const Mfm: React.FC<MfmRenderProps> = ({
         );
 
       case 'blockCode':
-        return <CodeHighlighter code={node.props.code} isFirst={nodes[0].type === 'blockCode'} />;
+        return (
+          <>
+            {needsNewline(prevNode) ? <Text>{'\n'}</Text> : <></>}
+            <CodeHighlighter code={node.props.code} />
+          </>
+        );
 
       case 'mathInline':
         return (
@@ -642,7 +661,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
       default:
         if (node.children) {
           return node.children.map((child, i) => (
-            <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+            <React.Fragment key={i}>{renderNode(child, i, nodes)}</React.Fragment>
           ));
         }
         return <></>;
@@ -652,7 +671,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
   return (
     <Text style={[style, { color: Colors[colorScheme ?? 'light'].text }]} selectable {...props}>
       {nodes.map((node, i) => (
-        <React.Fragment key={i}>{renderNode(node)}</React.Fragment>
+        <React.Fragment key={i}>{renderNode(node, i, nodes)}</React.Fragment>
       ))}
     </Text>
   );
@@ -684,14 +703,6 @@ const styles = StyleSheet.create({
   },
   small: {
     fontSize: 12,
-  },
-  quote: {
-    width: '100%',
-    borderLeftWidth: 3,
-    borderLeftColor: '#888',
-    paddingLeft: 8,
-    marginLeft: 8,
-    flex: 1,
   },
   search: {
     flexDirection: 'row',

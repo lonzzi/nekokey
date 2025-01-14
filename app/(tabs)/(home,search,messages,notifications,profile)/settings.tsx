@@ -7,10 +7,18 @@ export default function Settings() {
 
   return (
     <ScrollView style={{ paddingTop: top, marginHorizontal: 16 }}>
-      <View style={{ marginBottom: 60, width: '80%' }}>
+      <View style={{ marginBottom: 80, width: '80%' }}>
         <Mfm
-          // eslint-disable-next-line no-irregular-whitespace
-          text={`貰ったリアクションでキャラデザしてみた〜\nたれみみねこドラゴンちゃん🐉❄️🔨🖌️​:long_cat_smile:​\n#オリジナル`}
+          text={`<center>123</center>\n> 123:kawaii::kawaii::kawaii::kawaii_of_kawaii::kawaii_of_kawaii::kawaii_of_kawaii::kawaii_of_kawaii: 123\nquoteBefore`}
+          style={{ lineHeight: 24, fontSize: 16 }}
+        />
+      </View>
+      {/* <View style={{ marginBottom: 80, width: '80%' }}>
+        <Mfm
+          text={`1q2
+> 123123
+<center>123123</center>
+> 123:kawaii::kawaii::kawaii::kawaii_of_kawaii::kawaii_of_kawaii::kawaii_of_kawaii::kawaii_of_kawaii: 123`}
           style={{ lineHeight: 24, fontSize: 16 }}
         />
       </View>
@@ -44,7 +52,7 @@ export default function Settings() {
       </View>
       <View style={{ marginBottom: 160 }}>
         <Mfm text="さむくて頭痛が… 123" />
-      </View>
+      </View> */}
     </ScrollView>
   );
 }
