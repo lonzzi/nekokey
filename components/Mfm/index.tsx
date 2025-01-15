@@ -41,9 +41,11 @@ type MfmRenderProps = {
   parsedNodes?: mfm.MfmNode[] | null;
 } & TextProps;
 
+const blockElements = ['quote', 'center', 'blockCode', 'search'] as mfm.MfmNode['type'][];
+
 const needsNewline = (node: mfm.MfmNode | null) => {
   if (!node) return false;
-  return !['quote', 'center', 'blockCode'].includes(node.type);
+  return !blockElements.includes(node.type);
 };
 
 export const Mfm: React.FC<MfmRenderProps> = ({
