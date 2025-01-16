@@ -1,6 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import { Image, useImage } from 'expo-image';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ImageStyle, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 const MAX_RETRIES = 3;
@@ -18,24 +18,19 @@ const AutoResizingImage = ({
   style?: StyleProp<ImageStyle>;
 }) => {
   const [retryCount, setRetryCount] = useState(0);
-  const [currentUri, setCurrentUri] = useState(source.uri);
+  const [imageKey, setImageKey] = useState(0);
 
-  const image = useImage(currentUri, {
+  const image = useImage(source.uri, {
     onError: (error) => {
       console.log('Image loading error:', error);
       if (retryCount < MAX_RETRIES) {
         setTimeout(() => {
           setRetryCount((prev) => prev + 1);
-          setCurrentUri(`${source.uri}${source.uri.includes('?') ? '&' : '?'}retry=${Date.now()}`);
+          setImageKey((prevKey) => prevKey + 1);
         }, RETRY_DELAY);
       }
     },
   });
-
-  useEffect(() => {
-    setRetryCount(0);
-    setCurrentUri(source.uri);
-  }, [source.uri]);
 
   if (!image) {
     return (
@@ -57,12 +52,13 @@ const AutoResizingImage = ({
 
   return (
     <Image
+      key={imageKey}
       className={className}
-      source={{ uri: currentUri }}
+      source={{ uri: source.uri }}
       placeholder={image}
       style={[imageSize, style]}
       contentFit="contain"
-      recyclingKey={currentUri}
+      recyclingKey={source.uri}
       transition={200}
     />
   );
