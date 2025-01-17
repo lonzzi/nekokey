@@ -61,11 +61,6 @@ const validColor = (c: unknown): string | null => {
 
 const blockElements = ['quote', 'center', 'blockCode', 'search'] as mfm.MfmNode['type'][];
 
-// const needsNewline = (node: mfm.MfmNode | null) => {
-//   if (!node) return false;
-//   return !blockElements.includes(node.type);
-// };
-
 const renderMfmNodes = (
   nodes: mfm.MfmNode[],
   renderFn: (node: mfm.MfmNode, index: number, nodes: mfm.MfmNode[]) => React.ReactNode,
@@ -198,22 +193,19 @@ export const Mfm: React.FC<MfmRenderProps> = ({
 
       case 'center': {
         return (
-          <>
-            {/* {needsNewline(prevNode) ? <Text>{'\n'}</Text> : <></>} */}
-            <View
-              style={{
-                width: '100%',
-                flexDirection: 'row',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ fontSize, lineHeight, textAlign: 'center' }}>
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                ))}
-              </Text>
-            </View>
-          </>
+          <View
+            style={{
+              width: '100%',
+              flexDirection: 'row',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ fontSize, lineHeight, textAlign: 'center' }}>
+              {node.children.map((child, i) => (
+                <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
+              ))}
+            </Text>
+          </View>
         );
       }
 
@@ -228,14 +220,11 @@ export const Mfm: React.FC<MfmRenderProps> = ({
 
       case 'quote': {
         return (
-          <>
-            {/* {needsNewline(prevNode) ? <Text>{'\n'}</Text> : <></>} */}
-            <Quote style={style}>
-              {node.children.map((child, i) => (
-                <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-              ))}
-            </Quote>
-          </>
+          <Quote style={style}>
+            {node.children.map((child, i) => (
+              <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
+            ))}
+          </Quote>
         );
       }
 
@@ -667,12 +656,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
         );
 
       case 'blockCode':
-        return (
-          <>
-            {/* {needsNewline(prevNode) ? <Text>{'\n'}</Text> : <></>} */}
-            <CodeHighlighter code={node.props.code} />
-          </>
-        );
+        return <CodeHighlighter code={node.props.code} />;
 
       case 'mathInline':
         return (
@@ -738,6 +722,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   search: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

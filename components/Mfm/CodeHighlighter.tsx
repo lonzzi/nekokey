@@ -1,26 +1,17 @@
-import { isAndroid } from '@/lib/utils/platform';
 import { Highlight, themes } from 'prism-react-renderer';
-import React, { useState } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, TextStyle, View } from 'react-native';
 
 export const CodeHighlighter = ({ code, language }: { code: string; language?: string }) => {
-  const [height, setHeight] = useState(100);
-
   return (
     <Highlight theme={themes.github} code={code} language={language || 'javascript'}>
       {({ style, tokens, getLineProps, getTokenProps }) => (
         <Text>
-          {isAndroid && <Text style={{ lineHeight: height }}>{'\n'}</Text>}
           <ScrollView
             horizontal
             style={[styles.container, { backgroundColor: style.backgroundColor || '#1e1e1e' }]}
           >
-            <View
-              onLayout={(e) => {
-                const { height } = e.nativeEvent.layout;
-                setHeight(height);
-              }}
-            >
+            <View>
               {tokens.map((line, i) => (
                 <View {...getLineProps({ line, key: i })} style={styles.line} key={i}>
                   {line.map((token, key) => {
