@@ -3,8 +3,9 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { getEmoji } from '@/lib/utils/emojis';
 import { isAndroid } from '@/lib/utils/platform';
 import * as mfm from 'mfm-js';
+import { MfmNode } from 'mfm-js';
 import * as Misskey from 'misskey-js';
-import React from 'react';
+import React, { ReactNode } from 'react';
 import {
   Linking,
   StyleProp,
@@ -46,6 +47,42 @@ const blockElements = ['quote', 'center', 'blockCode', 'search'] as mfm.MfmNode[
 const needsNewline = (node: mfm.MfmNode | null) => {
   if (!node) return false;
   return !blockElements.includes(node.type);
+};
+
+const renderMfmNodes = (
+  nodes: mfm.MfmNode[],
+  renderFn: (node: mfm.MfmNode, index: number, nodes: mfm.MfmNode[]) => React.ReactNode,
+  props: TextProps,
+) => {
+  let currentInlineGroup: ReactNode[] = [];
+  const result: ReactNode[] = [];
+
+  const flushInlineGroup = () => {
+    if (currentInlineGroup.length > 0) {
+      result.push(
+        <Text key={`text-${result.length}`} selectable {...props}>
+          {currentInlineGroup}
+        </Text>,
+      );
+      currentInlineGroup = [];
+    }
+  };
+
+  nodes.forEach((node, i) => {
+    const isBlock = blockElements.includes(node.type);
+    const element = renderFn(node, i, nodes);
+
+    if (isBlock) {
+      flushInlineGroup();
+      result.push(<View key={`block-${i}`}>{element}</View>);
+    } else {
+      currentInlineGroup.push(<React.Fragment key={`inline-${i}`}>{element}</React.Fragment>);
+    }
+  });
+
+  flushInlineGroup();
+
+  return result;
 };
 
 export const Mfm: React.FC<MfmRenderProps> = ({
@@ -670,13 +707,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
     }
   };
 
-  return (
-    <Text style={[style, { color: Colors[colorScheme ?? 'light'].text }]} selectable {...props}>
-      {nodes.map((node, i) => (
-        <React.Fragment key={i}>{renderNode(node, i, nodes)}</React.Fragment>
-      ))}
-    </Text>
-  );
+  return <View>{renderMfmNodes(nodes, renderNode, props)}</View>;
 };
 
 const styles = StyleSheet.create({

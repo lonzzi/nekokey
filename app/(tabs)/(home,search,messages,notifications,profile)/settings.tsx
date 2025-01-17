@@ -1,5 +1,5 @@
 import { Mfm } from '@/components/Mfm';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Settings() {
@@ -7,6 +7,15 @@ export default function Settings() {
 
   return (
     <ScrollView style={{ paddingTop: top, marginHorizontal: 16 }}>
+      <View style={{ marginBottom: 80, width: '80%' }}>
+        <Text>
+          <Text>test</Text>test<Text>test</Text>
+        </Text>
+        <View>
+          <Text>test</Text>
+        </View>
+        <Text>test</Text>
+      </View>
       <View style={{ marginBottom: 80, width: '80%' }}>
         <Mfm
           text={`<center>123</center>\n> 123:kawaii::kawaii::kawaii::kawaii_of_kawaii::kawaii_of_kawaii::kawaii_of_kawaii::kawaii_of_kawaii: 123\nquoteBefore`}
