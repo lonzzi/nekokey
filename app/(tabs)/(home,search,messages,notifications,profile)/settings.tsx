@@ -18,7 +18,7 @@ export default function Settings() {
       </View>
       <View style={{ marginBottom: 80, width: '80%' }}>
         <Mfm
-          text={`<center>123</center>\n> 123:kawaii::kawaii::kawaii::kawaii_of_kawaii::kawaii_of_kawaii::kawaii_of_kawaii::kawaii_of_kawaii: 123\nquoteBefore`}
+          text={`<center>123</center>\n123:kawaii::kawaii::kawaii::kawaii_of_kawaii::kawaii_of_kawaii::kawaii_of_kawaii::kawaii_of_kawaii: 123\nquoteBefore`}
           style={{ lineHeight: 24, fontSize: 16 }}
         />
       </View>

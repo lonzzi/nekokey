@@ -3,7 +3,6 @@ import { useNoteUpdated } from '@/hooks/useNoteUpdated';
 import { useMisskeyApi } from '@/lib/api';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { getEmoji } from '@/lib/utils/emojis';
-import { isAndroid } from '@/lib/utils/platform';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -172,24 +171,24 @@ const UserHeader = ({ note, showTime = true }: { note: NoteType; showTime?: bool
       style={[showTime ? styles.header : { flexDirection: 'row', flex: 1, alignItems: 'center' }]}
     >
       <View style={styles.userInfo}>
-        <Text
-          style={{
-            transform: [{ translateY: isAndroid ? -2.5 : 0 }],
-            height: 24,
-          }}
-        >
+        <View style={{ height: 20 }}>
           <ThemedText type="defaultSemiBold" style={[styles.name]}>
             <Mfm
               text={note.user.name ?? note.user.username}
               author={note.user}
               emojiUrls={note.user.emojis}
+              style={{
+                fontSize: 14,
+                lineHeight: 20,
+                fontWeight: '600',
+              }}
               plain
             />
           </ThemedText>
-          <ThemedText style={styles.username} numberOfLines={1}>
-            @{note.user.username}
-          </ThemedText>
-        </Text>
+        </View>
+        <ThemedText style={[styles.username, { lineHeight: 20 }]} numberOfLines={1}>
+          @{note.user.username}
+        </ThemedText>
       </View>
       {showTime ? (
         <View>
@@ -551,6 +550,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginLeft: 4,
+    lineHeight: 16,
   },
   expandButton: {
     backgroundColor: 'transparent',

@@ -14,6 +14,7 @@ import {
   TextStyle,
   useColorScheme,
   View,
+  ViewStyle,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -33,6 +34,7 @@ type MfmRenderProps = {
   text: string;
   plain?: boolean;
   style?: StyleProp<TextStyle>;
+  containerStyle?: StyleProp<ViewStyle>;
   emojiUrls?: Record<string, string>;
   author?: Misskey.entities.UserLite;
   isNote?: boolean;
@@ -59,7 +61,13 @@ const validColor = (c: unknown): string | null => {
   return c.match(/^[0-9a-f]{3,6}$/i) ? c : null;
 };
 
-const blockElements = ['quote', 'center', 'blockCode', 'search'] as mfm.MfmNode['type'][];
+const blockElements = [
+  'quote',
+  'center',
+  'blockCode',
+  'search',
+  'mathBlock',
+] as mfm.MfmNode['type'][];
 
 const renderMfmNodes = (
   nodes: mfm.MfmNode[],
@@ -101,6 +109,7 @@ const renderMfmNodes = (
 export const Mfm: React.FC<MfmRenderProps> = ({
   text,
   style,
+  containerStyle,
   plain = false,
   emojiUrls = {},
   author,
@@ -115,9 +124,8 @@ export const Mfm: React.FC<MfmRenderProps> = ({
 
   const nodes = parsedNodes ?? (plain ? mfm.parseSimple : mfm.parse)(text);
 
-  const fontSize = StyleSheet.flatten(style)?.fontSize ?? 16;
-  const lineHeight = StyleSheet.flatten(style)?.lineHeight ?? 24;
-  const emojiHeight = plain ? fontSize : lineHeight;
+  const fontSize = StyleSheet.flatten(style)?.fontSize ?? (plain ? 14 : 16);
+  const lineHeight = StyleSheet.flatten(style)?.lineHeight ?? (plain ? 20 : 24);
 
   const renderNode = (node: mfm.MfmNode, index: number, nodes: mfm.MfmNode[]): React.ReactNode => {
     // const prevNode = index > 0 ? nodes[index - 1] : null;
@@ -672,14 +680,14 @@ export const Mfm: React.FC<MfmRenderProps> = ({
           <CustomEmoji
             emojiName={node.props.name}
             emojiUrl={emojiUrl}
-            height={emojiHeight}
+            height={lineHeight}
             plain={plain}
           />
         );
       }
 
       case 'unicodeEmoji':
-        return <TwEmoji text={node.props.emoji} offset={-2.5} height={(lineHeight * 5) / 6} />;
+        return <TwEmoji text={node.props.emoji} height={(lineHeight * 5) / 6} />;
 
       default:
         if (node.children) {
@@ -691,7 +699,17 @@ export const Mfm: React.FC<MfmRenderProps> = ({
     }
   };
 
-  return <View>{renderMfmNodes(nodes, renderNode, style, props)}</View>;
+  if (plain) {
+    return (
+      <Text style={[style, { color: Colors[colorScheme ?? 'light'].text }]} selectable {...props}>
+        {nodes.map((node, i) => (
+          <React.Fragment key={i}>{renderNode(node, i, nodes)}</React.Fragment>
+        ))}
+      </Text>
+    );
+  }
+
+  return <View style={containerStyle}>{renderMfmNodes(nodes, renderNode, style, props)}</View>;
 };
 
 const styles = StyleSheet.create({

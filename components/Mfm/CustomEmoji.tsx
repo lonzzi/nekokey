@@ -1,5 +1,4 @@
 import { calculateEmojiTranslateY } from '@/lib/utils/emojis';
-import { isAndroid } from '@/lib/utils/platform';
 import { Text } from 'react-native';
 
 import AutoResizingImage from '../AutoResizingImage';
@@ -8,7 +7,6 @@ export const CustomEmoji = ({
   emojiName,
   emojiUrl,
   height,
-  plain = false,
 }: {
   emojiName: string;
   emojiUrl: string;
@@ -26,9 +24,7 @@ export const CustomEmoji = ({
           style={{
             transform: [
               {
-                translateY:
-                  calculateEmojiTranslateY(height) +
-                  (plain ? (isAndroid ? -(height * 0.2) : -5) : 0),
+                translateY: calculateEmojiTranslateY(height),
               },
             ],
           }}
