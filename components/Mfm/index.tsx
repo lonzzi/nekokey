@@ -3,7 +3,6 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { getEmoji } from '@/lib/utils/emojis';
 import { isAndroid } from '@/lib/utils/platform';
 import * as mfm from 'mfm-js';
-import { MfmNode } from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import React, { ReactNode } from 'react';
 import {
@@ -42,16 +41,35 @@ type MfmRenderProps = {
   parsedNodes?: mfm.MfmNode[] | null;
 } & TextProps;
 
+const safeParseFloat = (str: unknown): number | null => {
+  if (typeof str !== 'string' || str === '') return null;
+  const num = parseFloat(str);
+  if (isNaN(num)) return null;
+  return num;
+};
+
+const validTime = (t: string | boolean | null | undefined) => {
+  if (t == null) return null;
+  if (typeof t === 'boolean') return null;
+  return t.match(/^-?[0-9.]+s$/) ? t : null;
+};
+
+const validColor = (c: unknown): string | null => {
+  if (typeof c !== 'string') return null;
+  return c.match(/^[0-9a-f]{3,6}$/i) ? c : null;
+};
+
 const blockElements = ['quote', 'center', 'blockCode', 'search'] as mfm.MfmNode['type'][];
 
-const needsNewline = (node: mfm.MfmNode | null) => {
-  if (!node) return false;
-  return !blockElements.includes(node.type);
-};
+// const needsNewline = (node: mfm.MfmNode | null) => {
+//   if (!node) return false;
+//   return !blockElements.includes(node.type);
+// };
 
 const renderMfmNodes = (
   nodes: mfm.MfmNode[],
   renderFn: (node: mfm.MfmNode, index: number, nodes: mfm.MfmNode[]) => React.ReactNode,
+  style: StyleProp<TextStyle>,
   props: TextProps,
 ) => {
   let currentInlineGroup: ReactNode[] = [];
@@ -60,7 +78,7 @@ const renderMfmNodes = (
   const flushInlineGroup = () => {
     if (currentInlineGroup.length > 0) {
       result.push(
-        <Text key={`text-${result.length}`} selectable {...props}>
+        <Text key={`text-${result.length}`} selectable style={style} {...props}>
           {currentInlineGroup}
         </Text>,
       );
@@ -106,26 +124,8 @@ export const Mfm: React.FC<MfmRenderProps> = ({
   const lineHeight = StyleSheet.flatten(style)?.lineHeight ?? 24;
   const emojiHeight = plain ? fontSize : lineHeight;
 
-  const safeParseFloat = (str: unknown): number | null => {
-    if (typeof str !== 'string' || str === '') return null;
-    const num = parseFloat(str);
-    if (isNaN(num)) return null;
-    return num;
-  };
-
-  const validTime = (t: string | boolean | null | undefined) => {
-    if (t == null) return null;
-    if (typeof t === 'boolean') return null;
-    return t.match(/^-?[0-9.]+s$/) ? t : null;
-  };
-
-  const validColor = (c: unknown): string | null => {
-    if (typeof c !== 'string') return null;
-    return c.match(/^[0-9a-f]{3,6}$/i) ? c : null;
-  };
-
   const renderNode = (node: mfm.MfmNode, index: number, nodes: mfm.MfmNode[]): React.ReactNode => {
-    const prevNode = index > 0 ? nodes[index - 1] : null;
+    // const prevNode = index > 0 ? nodes[index - 1] : null;
     // const nextNode = index < nodes.length - 1 ? nodes[index + 1] : null;
 
     switch (node.type) {
@@ -199,7 +199,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
       case 'center': {
         return (
           <>
-            {needsNewline(prevNode) ? <Text>{'\n'}</Text> : <></>}
+            {/* {needsNewline(prevNode) ? <Text>{'\n'}</Text> : <></>} */}
             <View
               style={{
                 width: '100%',
@@ -229,7 +229,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
       case 'quote': {
         return (
           <>
-            {needsNewline(prevNode) ? <Text>{'\n'}</Text> : <></>}
+            {/* {needsNewline(prevNode) ? <Text>{'\n'}</Text> : <></>} */}
             <Quote style={style}>
               {node.children.map((child, i) => (
                 <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
@@ -669,7 +669,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
       case 'blockCode':
         return (
           <>
-            {needsNewline(prevNode) ? <Text>{'\n'}</Text> : <></>}
+            {/* {needsNewline(prevNode) ? <Text>{'\n'}</Text> : <></>} */}
             <CodeHighlighter code={node.props.code} />
           </>
         );
@@ -707,7 +707,7 @@ export const Mfm: React.FC<MfmRenderProps> = ({
     }
   };
 
-  return <View>{renderMfmNodes(nodes, renderNode, props)}</View>;
+  return <View>{renderMfmNodes(nodes, renderNode, style, props)}</View>;
 };
 
 const styles = StyleSheet.create({
