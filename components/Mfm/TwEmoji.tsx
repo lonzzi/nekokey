@@ -1,4 +1,3 @@
-import { useAuth } from '@/lib/contexts/AuthContext';
 import { calculateEmojiTranslateY } from '@/lib/utils/emojis';
 import { Image } from 'expo-image';
 import React from 'react';
@@ -12,10 +11,14 @@ interface EmojiProps {
 }
 
 export const TwEmoji: React.FC<EmojiProps> = ({ text, height = 20, offset = 0 }) => {
-  const { serverInfo } = useAuth();
+  const parsed = twemoji.parse(text, {
+    folder: 'svg',
+    ext: '.svg',
+    base: 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/',
+  });
 
-  const codePoint = twemoji.convert.toCodePoint(text);
-  const url = `${serverInfo?.meta.uri}/twemoji/${codePoint}.svg`;
+  const match = parsed.match(/src="([^"]+)"/);
+  const url = match ? match[1] : null;
 
   if (url) {
     return (
