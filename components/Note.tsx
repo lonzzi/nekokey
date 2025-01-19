@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Image, useImage } from 'expo-image';
+import { useRouter } from 'expo-router';
 import _ from 'lodash';
 import type { Note as NoteType } from 'misskey-js/built/entities';
 import React, { useEffect, useState } from 'react';
@@ -20,6 +21,7 @@ import {
   Text,
   useColorScheme,
   View,
+  ViewStyle,
 } from 'react-native';
 
 import AutoResizingImage from './AutoResizingImage';
@@ -31,10 +33,19 @@ import { ThemedView } from './ThemedView';
 interface NoteProps {
   note: NoteType;
   onReply?: () => void;
-  endpoint: string;
+  queryKey: string[];
+  style?: StyleProp<ViewStyle>;
 }
 
-const UserAvatar = ({ avatarUrl, style }: { avatarUrl: string; style?: StyleProp<ImageStyle> }) => {
+const UserAvatar = ({
+  avatarUrl,
+  style,
+  onPress,
+}: {
+  avatarUrl: string;
+  style?: StyleProp<ImageStyle>;
+  onPress?: () => void;
+}) => {
   const image = useImage(avatarUrl, {
     onError: (error) => {
       console.log(error);
@@ -42,11 +53,13 @@ const UserAvatar = ({ avatarUrl, style }: { avatarUrl: string; style?: StyleProp
   });
 
   return (
-    <Image
-      source={{ uri: avatarUrl || '' }}
-      style={[style, !image && { backgroundColor: Colors.common.loadingBg }]}
-      transition={200}
-    />
+    <Pressable onPress={onPress}>
+      <Image
+        source={{ uri: avatarUrl || '' }}
+        style={[style, !image && { backgroundColor: Colors.common.loadingBg }]}
+        transition={200}
+      />
+    </Pressable>
   );
 };
 
@@ -239,7 +252,7 @@ const ReplyTo = ({ note }: { note: NoteType }) => {
 const NoteRoot = ({
   note,
   onReply,
-  endpoint,
+  queryKey,
   originalNote,
 }: NoteProps & { originalNote?: NoteType }) => {
   const { user } = useAuth();
@@ -248,13 +261,14 @@ const NoteRoot = ({
   const queryClient = useQueryClient();
   const colorScheme = useColorScheme();
   const { serverInfo } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     setNoteData(note);
   }, [note]);
 
   useNoteUpdated({
-    endpoint,
+    queryKey,
     note,
     onReacted: (reaction, userId, emoji) => {
       setNoteData((prev) => ({
@@ -292,6 +306,10 @@ const NoteRoot = ({
     },
   });
 
+  const handleUserPress = () => {
+    router.push(`/profile/${note.user.id}`);
+  };
+
   const reactionMutation = useMutation({
     mutationFn: async (reaction: string) => {
       if (noteData.myReaction) {
@@ -312,7 +330,7 @@ const NoteRoot = ({
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [endpoint] });
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
     },
     onError: () => {
       Alert.alert('操作失败', '请稍后重试');
@@ -328,7 +346,7 @@ const NoteRoot = ({
     },
     onSuccess: () => {
       Alert.alert('转发成功');
-      queryClient.invalidateQueries({ queryKey: [endpoint] });
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
     },
     onError: () => {
       Alert.alert('转发失败', '请稍后重试');
@@ -376,19 +394,15 @@ const NoteRoot = ({
   };
 
   return (
-    <ThemedView
-      style={[
-        {
-          paddingTop: 8,
-          borderBottomWidth: 1,
-          borderBottomColor: colorScheme === 'dark' ? '#111' : '#eee',
-        },
-      ]}
-    >
+    <ThemedView>
       {renderRenoteHeader()}
       <View style={styles.noteContainer}>
         <View style={styles.avatarContainer}>
-          <UserAvatar avatarUrl={note.user.avatarUrl || ''} style={styles.avatar} />
+          <UserAvatar
+            avatarUrl={note.user.avatarUrl || ''}
+            style={styles.avatar}
+            onPress={handleUserPress}
+          />
           {note.reply ? (
             <View
               style={[
@@ -432,17 +446,17 @@ const NoteRoot = ({
   );
 };
 
-export function Note({ note, onReply, endpoint }: NoteProps) {
+export function Note({ note, onReply, queryKey, style }: NoteProps) {
   const isRenote = !!note.renote && !note.text;
   const currentNote = isRenote && note.renote ? note.renote : note;
 
   return (
-    <ThemedView>
+    <ThemedView style={style}>
       {currentNote.reply && <ReplyTo note={currentNote} />}
       <NoteRoot
         note={currentNote}
         onReply={onReply}
-        endpoint={endpoint}
+        queryKey={queryKey}
         originalNote={isRenote ? note : undefined}
       />
     </ThemedView>
@@ -452,8 +466,6 @@ export function Note({ note, onReply, endpoint }: NoteProps) {
 const styles = StyleSheet.create({
   noteContainer: {
     flexDirection: 'row',
-    padding: 12,
-    paddingTop: 2,
   },
   avatar: {
     width: 48,
@@ -562,7 +574,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   replyWrapper: {
-    paddingTop: 8,
+    paddingBottom: 12,
   },
   avatarContainer: {
     alignItems: 'center',

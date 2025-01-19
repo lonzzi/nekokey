@@ -7,6 +7,8 @@ import { NavigationOptions } from 'expo-router/build/global-state/routing';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Mfm } from './Mfm';
+
 export type DrawerItem = {
   label: string;
   icon: {
@@ -91,9 +93,19 @@ export const DrawerContent = () => {
           />
         </View>
 
-        <View className="gap-1">
-          <Text className="font-bold text-lg">{user.name}</Text>
-          <Text className="text-gray-500">@{user.username}</Text>
+        <View>
+          <View className="mb-2">
+            <Text className="font-bold">
+              <Mfm
+                text={user.name || user.username}
+                plain
+                style={{ fontSize: 16, lineHeight: 20 }}
+              />
+            </Text>
+          </View>
+          <View>
+            <Text className="text-gray-500">@{user.username}</Text>
+          </View>
         </View>
 
         <View className="flex-row gap-4 mt-3">

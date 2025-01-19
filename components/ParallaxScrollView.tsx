@@ -1,26 +1,33 @@
 import { ThemedView } from '@/components/ThemedView';
 import { useBottomTabOverflow } from '@/components/ui/TabBarBackground';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import type { PropsWithChildren, ReactElement } from 'react';
-import { StyleSheet } from 'react-native';
+import { type PropsWithChildren, type ReactElement } from 'react';
+import { RefreshControl, StyleSheet } from 'react-native';
 import Animated, {
+  AnimatedScrollViewProps,
   interpolate,
   useAnimatedRef,
   useAnimatedStyle,
   useScrollViewOffset,
 } from 'react-native-reanimated';
 
-const HEADER_HEIGHT = 250;
+const HEADER_HEIGHT = 200;
 
 type Props = PropsWithChildren<{
   headerImage: ReactElement;
   headerBackgroundColor: { dark: string; light: string };
-}>;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+}> &
+  AnimatedScrollViewProps;
 
 export default function ParallaxScrollView({
   children,
   headerImage,
   headerBackgroundColor,
+  onRefresh,
+  isRefreshing = false,
+  ...props
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
@@ -50,6 +57,16 @@ export default function ParallaxScrollView({
         scrollEventThrottle={16}
         scrollIndicatorInsets={{ bottom }}
         contentContainerStyle={{ paddingBottom: bottom }}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              progressViewOffset={100}
+            />
+          ) : undefined
+        }
+        {...props}
       >
         <Animated.View
           style={[
@@ -76,8 +93,5 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 32,
-    gap: 16,
-    overflow: 'hidden',
   },
 });

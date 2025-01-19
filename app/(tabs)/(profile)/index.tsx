@@ -1,19 +1,14 @@
 import { Profile } from '@/components/Profile';
+import useRefresh from '@/hooks/useRefresh';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
-  const { top } = useSafeAreaInsets();
+  const { user, refresh } = useAuth();
+  const { refreshing, onRefresh } = useRefresh(refresh);
 
   if (!user) {
     return null;
   }
 
-  return (
-    <View style={{ paddingTop: top }}>
-      <Profile user={user?.name} />
-    </View>
-  );
+  return <Profile user={user} onRefresh={onRefresh} isRefreshing={refreshing} />;
 }

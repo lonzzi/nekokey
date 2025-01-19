@@ -18,6 +18,7 @@ interface AuthState {
   loaded: boolean;
   isAuthenticated: boolean;
   serverInfo: ServerInfo | null;
+  misskeyApi: Misskey.api.APIClient | null;
 }
 
 interface AuthActions {
@@ -153,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     refresh,
+    misskeyApi,
   };
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

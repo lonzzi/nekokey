@@ -5,7 +5,7 @@ import { NoteUpdatedEvent } from 'misskey-js/built/streaming.types';
 import { useEffect } from 'react';
 
 type NoteUpdatedProps = {
-  endpoint: string;
+  queryKey: string[];
   note: NoteType;
   onDeleted?: () => void;
   onReacted?: (reaction: string, userId: string, emoji?: { name: string; url: string }) => void;
@@ -14,7 +14,7 @@ type NoteUpdatedProps = {
 };
 
 export const useNoteUpdated = ({
-  endpoint,
+  queryKey,
   note,
   onDeleted,
   onReacted,
@@ -32,7 +32,7 @@ export const useNoteUpdated = ({
 
       switch (type) {
         case 'deleted': {
-          queryClient.setQueryData([endpoint], (oldData: InfiniteData<NoteType[]>) => {
+          queryClient.setQueryData([queryKey], (oldData: InfiniteData<NoteType[]>) => {
             if (!oldData) return oldData;
             return {
               ...oldData,
@@ -59,7 +59,7 @@ export const useNoteUpdated = ({
           break;
         }
         case 'pollVoted': {
-          queryClient.invalidateQueries({ queryKey: [endpoint] });
+          queryClient.invalidateQueries({ queryKey: [queryKey] });
           onPollVoted?.();
           break;
         }
@@ -73,5 +73,5 @@ export const useNoteUpdated = ({
       stream.send('un', { id: note.id });
       stream.off('noteUpdated', onStreamNoteUpdated);
     };
-  }, [stream, endpoint, note.id, onDeleted, onReacted, onUnreacted, onPollVoted, queryClient]);
+  }, [stream, queryKey, note.id, onDeleted, onReacted, onUnreacted, onPollVoted, queryClient]);
 };

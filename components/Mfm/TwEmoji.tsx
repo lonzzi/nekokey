@@ -1,4 +1,3 @@
-import { calculateEmojiTranslateY } from '@/lib/utils/emojis';
 import { Image } from 'expo-image';
 import React from 'react';
 import { Text } from 'react-native';
@@ -7,10 +6,9 @@ import twemoji from 'twemoji';
 interface EmojiProps {
   text: string;
   height?: number;
-  offset?: number;
 }
 
-export const TwEmoji: React.FC<EmojiProps> = ({ text, height = 20, offset = 0 }) => {
+export const TwEmoji: React.FC<EmojiProps> = ({ text, height = 20 }) => {
   const parsed = twemoji.parse(text, {
     folder: 'svg',
     ext: '.svg',
@@ -28,7 +26,7 @@ export const TwEmoji: React.FC<EmojiProps> = ({ text, height = 20, offset = 0 })
           style={{
             height,
             width: height,
-            transform: [{ translateY: calculateEmojiTranslateY(height) + offset }],
+            transform: [{ translateY: height / 5 }],
           }}
           contentFit="contain"
         />

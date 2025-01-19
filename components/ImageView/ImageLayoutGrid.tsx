@@ -106,7 +106,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images, style }) => {
           styles.imageContainer,
           imageCount === 1 && {
             width: containerWidth,
-            height: Math.min(imageAspectRatio * containerWidth, 560) || 280,
+            height: Math.max(Math.min(imageAspectRatio * containerWidth, 560) || 280, 60),
           },
           imageCount === 2 && styles.doubleImageContainer,
           imageCount >= 3 && styles.multiImageContainer,

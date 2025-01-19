@@ -13,7 +13,7 @@ export default function SharedLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="profile/[user]" options={{ headerShown: false }} />
+      <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="settings" />
       <Stack.Screen name="announcements" />
       <Stack.Screen name="explore" />

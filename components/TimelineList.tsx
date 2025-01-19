@@ -151,7 +151,9 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
     );
 
     const renderItem = useCallback(
-      ({ item }: { item: NoteType }) => <MemoizedNote endpoint={endpoint} note={item} />,
+      ({ item }: { item: NoteType }) => (
+        <MemoizedNote queryKey={[endpoint]} note={item} style={styles.note} />
+      ),
       [],
     );
 
@@ -322,5 +324,11 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 9999,
+  },
+  note: {
+    paddingTop: 8,
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
 });
