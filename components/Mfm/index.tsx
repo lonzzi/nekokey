@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { getEmoji } from '@/lib/utils/emojis';
 import { isAndroid } from '@/lib/utils/platform';
 import * as mfm from 'mfm-js';
+import { isMfmBlock } from 'mfm-js/built/node';
 import * as Misskey from 'misskey-js';
 import React, { ReactNode } from 'react';
 import {
@@ -61,14 +62,6 @@ const validColor = (c: unknown): string | null => {
   return c.match(/^[0-9a-f]{3,6}$/i) ? c : null;
 };
 
-const blockElements = [
-  'quote',
-  'center',
-  'blockCode',
-  'search',
-  'mathBlock',
-] as mfm.MfmNode['type'][];
-
 const renderMfmNodes = (
   nodes: mfm.MfmNode[],
   renderFn: (node: mfm.MfmNode, index: number, nodes: mfm.MfmNode[]) => React.ReactNode,
@@ -90,7 +83,7 @@ const renderMfmNodes = (
   };
 
   nodes.forEach((node, i) => {
-    const isBlock = blockElements.includes(node.type);
+    const isBlock = isMfmBlock(node);
     const element = renderFn(node, i, nodes);
 
     if (isBlock) {
