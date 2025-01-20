@@ -5,6 +5,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import type { Note as NoteType, UserDetailed } from 'misskey-js/built/entities';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, useColorScheme, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle } from 'react-native-reanimated';
 
@@ -24,6 +25,10 @@ export const Profile = ({ user, onRefresh, isRefreshing = false }: ProfileProps)
   const bottomTabHeight = useBottomTabBarHeight();
   const colorScheme = useColorScheme() ?? 'light';
   const { scrollOffset } = useParallaxScroll();
+
+  useEffect(() => {
+    scrollOffset.value = 0;
+  }, []);
 
   const avatarAnimatedStyle = useAnimatedStyle(() => {
     const avatarSize = interpolate(scrollOffset.value, [-25, 0, 25], [1, 1, 0.6], 'clamp');
