@@ -1,4 +1,4 @@
-import { useParallaxScroll } from '@/components/ParallaxSectionList/useParallaxScroll';
+import { useParallaxScroll } from '@/components/ParallaxFlatList/useParallaxScroll';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -11,7 +11,7 @@ import Animated, { interpolate, useAnimatedStyle } from 'react-native-reanimated
 
 import { Mfm } from './Mfm';
 import { Note } from './Note';
-import ParallaxSectionList from './ParallaxSectionList';
+import ParallaxFlatList from './ParallaxFlatList';
 import { ThemedText } from './ThemedText';
 
 interface ProfileProps {
@@ -38,24 +38,17 @@ export const Profile = ({ user, onRefresh, isRefreshing = false }: ProfileProps)
     };
   });
 
-  const { data: Notes } = useQuery({
+  const { data: notes } = useQuery({
     queryKey: ['notes', user.id],
     queryFn: () => misskeyApi?.request('users/notes', { userId: user.id }),
   });
-
-  const sections = [
-    {
-      title: 'notes',
-      data: Notes || [],
-    },
-  ];
 
   const renderNote = ({ item }: { item: NoteType }) => (
     <Note note={item} queryKey={['notes', user.id]} style={styles.note} />
   );
 
   return (
-    <ParallaxSectionList
+    <ParallaxFlatList
       headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
       headerImage={
         <Image
@@ -64,7 +57,7 @@ export const Profile = ({ user, onRefresh, isRefreshing = false }: ProfileProps)
           contentFit="cover"
         />
       }
-      extraListHeaderComponent={
+      staticHeaderComponent={
         <View style={styles.container}>
           <View style={styles.avatarContainer}>
             <Animated.View style={[styles.avatar, avatarAnimatedStyle]}>
@@ -112,15 +105,7 @@ export const Profile = ({ user, onRefresh, isRefreshing = false }: ProfileProps)
           </View>
         </View>
       }
-      onRefresh={onRefresh}
-      isRefreshing={isRefreshing}
-      showsHorizontalScrollIndicator={false}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: bottomTabHeight }}
-      sections={sections}
-      renderItem={renderNote}
-      keyExtractor={(item: NoteType) => item.id}
-      renderSectionHeader={() => (
+      stickyHeaderComponent={
         <View
           style={{
             paddingHorizontal: 16,
@@ -130,7 +115,15 @@ export const Profile = ({ user, onRefresh, isRefreshing = false }: ProfileProps)
         >
           <ThemedText type="defaultSemiBold">最近动态</ThemedText>
         </View>
-      )}
+      }
+      data={notes || []}
+      renderItem={renderNote}
+      onRefresh={onRefresh}
+      isRefreshing={isRefreshing}
+      showsHorizontalScrollIndicator={false}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: bottomTabHeight }}
+      keyExtractor={(item: NoteType) => item.id}
     />
   );
 };

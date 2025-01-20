@@ -1,5 +1,5 @@
 import { MainScrollProvider } from '@/components/MainScrollProvider';
-import { ParallaxScrollProvider } from '@/components/ParallaxSectionList/useParallaxScroll';
+import { ParallaxScrollProvider } from '@/components/ParallaxFlatList/useParallaxScroll';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { initMisskeyClient } from '@/lib/api';
 import { AuthProvider } from '@/lib/contexts/AuthContext';

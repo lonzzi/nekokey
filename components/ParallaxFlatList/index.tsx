@@ -2,8 +2,9 @@ import { ThemedView } from '@/components/ThemedView';
 import { useBottomTabOverflow } from '@/components/ui/TabBarBackground';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { type ReactElement } from 'react';
-import { RefreshControl, SectionList, SectionListProps, StyleSheet, View } from 'react-native';
+import { RefreshControl, StyleSheet, View } from 'react-native';
 import Animated, {
+  FlatListPropsWithLayout,
   interpolate,
   runOnJS,
   useAnimatedScrollHandler,
@@ -17,39 +18,46 @@ import { useParallaxScroll } from './useParallaxScroll';
 
 type Props<ItemT> = {
   headerImage: ReactElement;
-  extraListHeaderComponent?: ReactElement;
   headerBackgroundColor: { dark: string; light: string };
+  stickyHeaderComponent?: ReactElement;
+  staticHeaderComponent?: ReactElement;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   onScroll?: (event: ReanimatedScrollEvent) => void;
-  renderSectionHeader?: () => ReactElement;
-} & Omit<SectionListProps<ItemT>, 'sections' | 'onScroll'> & {
-    sections: Array<{
-      title: string;
-      data: ItemT[];
-    }>;
-  };
+} & Omit<
+  FlatListPropsWithLayout<ItemT>,
+  'onScroll' | 'ListHeaderComponent' | 'stickyHeaderIndices'
+>;
 
 const HEADER_HEIGHT = 200;
 
-export default function ParallaxSectionList<ItemT>({
+const emulatedScrollOffset = (scrollOffset: number, topOffset: number) => {
+  'worklet';
+  if (scrollOffset > topOffset) {
+    return -topOffset;
+  }
+  if (scrollOffset > 0) {
+    return -scrollOffset;
+  }
+  return 0;
+};
+
+export default function ParallaxFlatList<ItemT>({
   headerImage,
   headerBackgroundColor,
-  extraListHeaderComponent,
+  stickyHeaderComponent,
+  staticHeaderComponent,
   onRefresh,
   isRefreshing = false,
   onScroll,
-  renderSectionHeader,
   ...props
 }: Props<ItemT>) {
-  const AnimatedSectionList =
-    Animated.createAnimatedComponent<SectionListProps<ItemT>>(SectionList);
   const { top } = useSafeAreaInsets();
   const topOffset = HEADER_HEIGHT - top;
   const colorScheme = useColorScheme() ?? 'light';
   const bottom = useBottomTabOverflow();
   const { scrollOffset } = useParallaxScroll();
-  const extraListHeaderHeight = useSharedValue(0);
+  const staticHeaderHeight = useSharedValue(0);
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
     'worklet';
@@ -59,57 +67,36 @@ export default function ParallaxSectionList<ItemT>({
     }
   });
 
-  const headerAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {
-          translateY: interpolate(
-            scrollOffset.value,
-            [-HEADER_HEIGHT, 0, HEADER_HEIGHT],
-            [-HEADER_HEIGHT / 2, 0, 0],
-          ),
-        },
-        {
-          scale: interpolate(scrollOffset.value, [-HEADER_HEIGHT, 0, HEADER_HEIGHT], [2, 1, 1]),
-        },
-        {
-          translateY:
-            scrollOffset.value > topOffset
-              ? -topOffset
-              : scrollOffset.value > 0
-                ? -scrollOffset.value
-                : 0,
-        },
-      ],
-      zIndex: scrollOffset.value > topOffset ? 2 : 0,
-    };
-  });
-
-  const extraListHeaderAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: scrollOffset.value > 0 ? -scrollOffset.value : 0 }],
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: interpolate(
+          scrollOffset.value,
+          [-HEADER_HEIGHT, 0, HEADER_HEIGHT],
+          [-HEADER_HEIGHT / 2, 0, 0],
+        ),
+      },
+      {
+        scale: interpolate(scrollOffset.value, [-HEADER_HEIGHT, 0, HEADER_HEIGHT], [2, 1, 1]),
+      },
+      {
+        translateY: emulatedScrollOffset(scrollOffset.value, topOffset),
+      },
+    ],
+    zIndex: scrollOffset.value > topOffset ? 2 : 0,
   }));
 
-  const renderSectionHeaderAnimatedStyle = useAnimatedStyle(() => {
-    const sectionHeaderTopOffset = topOffset + extraListHeaderHeight.value;
-
-    return {
-      transform: [
-        {
-          translateY:
-            scrollOffset.value > sectionHeaderTopOffset
-              ? -sectionHeaderTopOffset
-              : scrollOffset.value > 0
-                ? -scrollOffset.value
-                : 0,
-        },
-      ],
-    };
-  });
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: emulatedScrollOffset(scrollOffset.value, topOffset + staticHeaderHeight.value),
+      },
+    ],
+  }));
 
   return (
     <ThemedView style={styles.container}>
-      <AnimatedSectionList
-        style={{ zIndex: 2 }}
+      <Animated.FlatList
         scrollEventThrottle={16}
         scrollIndicatorInsets={{ bottom }}
         contentContainerStyle={{ paddingBottom: bottom }}
@@ -124,7 +111,7 @@ export default function ParallaxSectionList<ItemT>({
         }
         {...props}
         onScroll={scrollHandler}
-        renderSectionHeader={() => (
+        ListHeaderComponent={
           <View>
             <Animated.View
               style={[
@@ -136,23 +123,17 @@ export default function ParallaxSectionList<ItemT>({
               {headerImage}
             </Animated.View>
             <Animated.View
-              style={[extraListHeaderAnimatedStyle, { zIndex: 1 }]}
+              style={contentAnimatedStyle}
               onLayout={(e) => {
-                extraListHeaderHeight.value = e.nativeEvent.layout.height;
+                staticHeaderHeight.value = e.nativeEvent.layout.height;
               }}
             >
-              {extraListHeaderComponent}
+              {staticHeaderComponent}
             </Animated.View>
-            <Animated.View
-              style={[
-                renderSectionHeaderAnimatedStyle,
-                { backgroundColor: headerBackgroundColor[colorScheme] },
-              ]}
-            >
-              {renderSectionHeader?.()}
-            </Animated.View>
+            <Animated.View style={contentAnimatedStyle}>{stickyHeaderComponent}</Animated.View>
           </View>
-        )}
+        }
+        stickyHeaderIndices={[0]}
       />
     </ThemedView>
   );
@@ -165,7 +146,6 @@ const styles = StyleSheet.create({
   header: {
     height: HEADER_HEIGHT,
     overflow: 'hidden',
-    zIndex: 1,
   },
   content: {
     flex: 1,
