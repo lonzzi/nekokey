@@ -5,7 +5,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import type { Note as NoteType, UserDetailed } from 'misskey-js/built/entities';
-import { useEffect } from 'react';
+import { memo, useCallback, useEffect } from 'react';
 import { Pressable, StyleSheet, useColorScheme, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle } from 'react-native-reanimated';
 
@@ -13,6 +13,8 @@ import { Mfm } from './Mfm';
 import { Note } from './Note';
 import ParallaxFlatList from './ParallaxFlatList';
 import { ThemedText } from './ThemedText';
+
+const MemoizedNote = memo(Note);
 
 interface ProfileProps {
   user: UserDetailed;
@@ -43,8 +45,11 @@ export const Profile = ({ user, onRefresh, isRefreshing = false }: ProfileProps)
     queryFn: () => misskeyApi?.request('users/notes', { userId: user.id }),
   });
 
-  const renderNote = ({ item }: { item: NoteType }) => (
-    <Note note={item} queryKey={['notes', user.id]} style={styles.note} />
+  const renderNote = useCallback(
+    ({ item }: { item: NoteType }) => (
+      <MemoizedNote note={item} queryKey={['notes', user.id]} style={styles.note} />
+    ),
+    [user.id],
   );
 
   return (
