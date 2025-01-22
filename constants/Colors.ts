@@ -24,6 +24,7 @@ export const Colors = {
       bottom: 0,
       backgroundColor: 'rgba(255,255,255,0.6)',
     } satisfies ViewStyle,
+    border: '#eee',
   },
   dark: {
     text: '#ECEDEE',
@@ -40,6 +41,7 @@ export const Colors = {
       bottom: 0,
       backgroundColor: 'rgba(0,0,0,0.8)',
     } satisfies ViewStyle,
+    border: '#111',
   },
   common: {
     accent: 'rgb(180, 233, 0)',

@@ -146,7 +146,13 @@ export default function ParallaxFlatList<ItemT>({
             <Animated.View
               style={[
                 styles.header,
-                { backgroundColor: headerBackgroundColor[colorScheme] },
+                {
+                  backgroundColor: headerBackgroundColor[colorScheme],
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                },
                 headerAnimatedStyle,
               ]}
             >
@@ -160,6 +166,7 @@ export default function ParallaxFlatList<ItemT>({
               </Animated.View>
             </Animated.View>
             <Animated.View
+              style={{ marginTop: HEADER_HEIGHT }}
               onLayout={(e) => {
                 staticHeaderHeight.value = e.nativeEvent.layout.height;
               }}

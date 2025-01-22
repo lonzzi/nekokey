@@ -1,6 +1,7 @@
 import { useParallaxScroll } from '@/components/ParallaxFlatList/useParallaxScroll';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { isIOS } from '@/lib/utils/platform';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
@@ -47,13 +48,30 @@ export const Profile = ({ user, onRefresh, isRefreshing = false }: ProfileProps)
 
   const renderNote = useCallback(
     ({ item }: { item: NoteType }) => (
-      <MemoizedNote note={item} queryKey={['notes', user.id]} style={styles.note} />
+      <MemoizedNote
+        note={item}
+        queryKey={['notes', user.id]}
+        style={[
+          styles.note,
+          {
+            borderBottomColor: Colors[colorScheme].border,
+          },
+        ]}
+      />
     ),
     [user.id],
   );
 
   return (
     <ParallaxFlatList
+      scrollEventThrottle={1}
+      automaticallyAdjustsScrollIndicatorInsets={false}
+      onEndReachedThreshold={2}
+      maxToRenderPerBatch={isIOS ? 3 : 1}
+      windowSize={9}
+      updateCellsBatchingPeriod={30}
+      removeClippedSubviews={true}
+      initialNumToRender={10}
       headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
       headerImage={
         <Image
@@ -218,6 +236,5 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
 });
