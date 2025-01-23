@@ -7,7 +7,7 @@ import { Alert } from 'react-native';
 
 import { initMisskeyClient } from '../api';
 
-interface ServerInfo {
+export interface ServerInfo {
   meta: Misskey.entities.MetaResponse;
   emojis: Misskey.entities.EmojisResponse['emojis'];
 }

@@ -6,9 +6,5 @@ export default function ProfilePage() {
   const { user, refresh } = useAuth();
   const { refreshing, onRefresh } = useRefresh(refresh);
 
-  if (!user) {
-    return null;
-  }
-
-  return <Profile user={user} onRefresh={onRefresh} isRefreshing={refreshing} />;
+  return <Profile id={user?.id || ''} onRefresh={onRefresh} isRefreshing={refreshing} />;
 }

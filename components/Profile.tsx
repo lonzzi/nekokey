@@ -1,13 +1,13 @@
 import { useParallaxScroll } from '@/components/ParallaxFlatList/useParallaxScroll';
 import { Colors } from '@/constants/Colors';
-import { useAuth } from '@/lib/contexts/AuthContext';
+import { ServerInfo, useAuth } from '@/lib/contexts/AuthContext';
 import { isIOS } from '@/lib/utils/platform';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import type { Note as NoteType, UserDetailed } from 'misskey-js/built/entities';
-import { memo, useCallback, useEffect } from 'react';
-import { Pressable, StyleSheet, useColorScheme, View } from 'react-native';
+import { memo, useCallback, useEffect, useMemo } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, useColorScheme, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle } from 'react-native-reanimated';
 
 import { Mfm } from './Mfm';
@@ -23,7 +23,41 @@ interface ProfileProps {
   isRefreshing?: boolean;
 }
 
-export const Profile = ({ user, onRefresh, isRefreshing = false }: ProfileProps) => {
+const UserStats = memo(({ user }: { user: UserDetailed }) => (
+  <View style={styles.stats}>
+    <View style={styles.statItem}>
+      <ThemedText style={styles.statNumber}>{user.followingCount}</ThemedText>
+      <ThemedText style={styles.statLabel}>正在关注</ThemedText>
+    </View>
+    <View style={styles.statItem}>
+      <ThemedText style={styles.statNumber}>{user.followersCount}</ThemedText>
+      <ThemedText style={styles.statLabel}>关注者</ThemedText>
+    </View>
+  </View>
+));
+UserStats.displayName = 'UserStats';
+
+const UserInfo = memo(
+  ({ user, serverInfo }: { user: UserDetailed; serverInfo?: ServerInfo | null }) => (
+    <View style={styles.userInfo}>
+      <ThemedText>
+        <Mfm text={user.name || ''} plain style={styles.displayName} />
+      </ThemedText>
+      <ThemedText style={styles.username}>
+        @{user.username}
+        {user.host && serverInfo?.meta.uri !== user.host ? `@${user.host}` : ''}
+      </ThemedText>
+      {user.description && (
+        <View style={{ marginTop: 12 }}>
+          <Mfm text={user.description || ''} author={user} style={styles.bio} />
+        </View>
+      )}
+    </View>
+  ),
+);
+UserInfo.displayName = 'UserInfo';
+
+const ProfileInner = ({ user, onRefresh, isRefreshing = false }: ProfileProps) => {
   const { misskeyApi, serverInfo, user: authUser } = useAuth();
   const bottomTabHeight = useBottomTabBarHeight();
   const colorScheme = useColorScheme() ?? 'light';
@@ -59,7 +93,51 @@ export const Profile = ({ user, onRefresh, isRefreshing = false }: ProfileProps)
         ]}
       />
     ),
-    [user.id],
+    [user.id, colorScheme],
+  );
+
+  const headerStaticComponent = useMemo(
+    () => (
+      <View style={styles.container}>
+        <View style={styles.avatarContainer}>
+          <Animated.View style={[styles.avatar, avatarAnimatedStyle]}>
+            <Image
+              source={{ uri: user.avatarUrl || '' }}
+              style={{ height: '100%', width: '100%' }}
+              contentFit="cover"
+            />
+          </Animated.View>
+          <View style={styles.followButtonContainer}>
+            <View style={styles.followButton}>
+              <Pressable>
+                <ThemedText style={{ fontWeight: 'bold' }}>
+                  {authUser?.id === user.id ? '编辑资料' : '关注'}
+                </ThemedText>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
+        <UserInfo user={user} serverInfo={serverInfo} />
+        <UserStats user={user} />
+      </View>
+    ),
+    [user, serverInfo, authUser?.id, avatarAnimatedStyle],
+  );
+
+  const stickyHeaderComponent = useMemo(
+    () => (
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          backgroundColor: Colors[colorScheme].background,
+        }}
+      >
+        <ThemedText type="defaultSemiBold">最近动态</ThemedText>
+      </View>
+    ),
+    [colorScheme],
   );
 
   return (
@@ -71,7 +149,7 @@ export const Profile = ({ user, onRefresh, isRefreshing = false }: ProfileProps)
       windowSize={9}
       updateCellsBatchingPeriod={30}
       removeClippedSubviews={true}
-      initialNumToRender={10}
+      initialNumToRender={5}
       headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
       headerImage={
         <Image
@@ -80,66 +158,9 @@ export const Profile = ({ user, onRefresh, isRefreshing = false }: ProfileProps)
           contentFit="cover"
         />
       }
-      staticHeaderComponent={
-        <View style={styles.container}>
-          <View style={styles.avatarContainer}>
-            <Animated.View style={[styles.avatar, avatarAnimatedStyle]}>
-              <Image
-                source={{ uri: user.avatarUrl || '' }}
-                style={{ height: '100%', width: '100%' }}
-                contentFit="cover"
-              />
-            </Animated.View>
-            <View style={styles.followButtonContainer}>
-              <View style={styles.followButton}>
-                <Pressable>
-                  <ThemedText style={{ fontWeight: 'bold' }}>
-                    {authUser?.id === user.id ? '编辑资料' : '关注'}
-                  </ThemedText>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.userInfo}>
-            <ThemedText>
-              <Mfm text={user.name || ''} plain style={styles.displayName} />
-            </ThemedText>
-            <ThemedText style={styles.username}>
-              @{user.username}
-              {user.host && serverInfo?.meta.uri !== user.host ? `@${user.host}` : ''}
-            </ThemedText>
-            {user.description && (
-              <View style={{ marginTop: 12 }}>
-                <Mfm text={user.description || ''} author={user} style={styles.bio} />
-              </View>
-            )}
-          </View>
-
-          <View style={styles.stats}>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>{user.followingCount}</ThemedText>
-              <ThemedText style={styles.statLabel}>正在关注</ThemedText>
-            </View>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>{user.followersCount}</ThemedText>
-              <ThemedText style={styles.statLabel}>关注者</ThemedText>
-            </View>
-          </View>
-        </View>
-      }
-      stickyHeaderComponent={
-        <View
-          style={{
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            backgroundColor: Colors[colorScheme].background,
-          }}
-        >
-          <ThemedText type="defaultSemiBold">最近动态</ThemedText>
-        </View>
-      }
-      data={notes || []}
+      staticHeaderComponent={headerStaticComponent}
+      stickyHeaderComponent={stickyHeaderComponent}
+      data={notes}
       renderItem={renderNote}
       onRefresh={onRefresh}
       isRefreshing={isRefreshing}
@@ -149,6 +170,37 @@ export const Profile = ({ user, onRefresh, isRefreshing = false }: ProfileProps)
       keyExtractor={(item: NoteType) => item.id}
     />
   );
+};
+
+export const Profile = ({
+  id,
+  onRefresh,
+  isRefreshing = false,
+}: Omit<ProfileProps, 'user'> & { id: string }) => {
+  const { misskeyApi } = useAuth();
+
+  const { data: user, isLoading } = useQuery({
+    queryKey: ['user', id],
+    queryFn: () => misskeyApi?.request('users/show', { userId: id }),
+  });
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ThemedText>User not found</ThemedText>
+      </View>
+    );
+  }
+
+  return <ProfileInner user={user} onRefresh={onRefresh} isRefreshing={isRefreshing} />;
 };
 
 const styles = StyleSheet.create({
