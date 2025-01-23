@@ -29,6 +29,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   useColorScheme,
+  View,
   ViewToken,
 } from 'react-native';
 import Animated, {
@@ -152,16 +153,7 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
 
     const renderItem = useCallback(
       ({ item }: { item: NoteType }) => (
-        <MemoizedNote
-          queryKey={[endpoint]}
-          note={item}
-          style={[
-            styles.note,
-            {
-              borderBottomColor: Colors[colorScheme ?? 'light'].border,
-            },
-          ]}
-        />
+        <MemoizedNote queryKey={[endpoint]} note={item} style={styles.note} />
       ),
       [],
     );
@@ -253,6 +245,9 @@ export const TimelineList = forwardRef<TimelineListRef, TimelineListProps>(
           }
           viewabilityConfig={viewabilityConfig}
           onViewableItemsChanged={onViewableItemsChanged}
+          ItemSeparatorComponent={() => (
+            <View style={{ height: 1, backgroundColor: Colors[colorScheme ?? 'light'].border }} />
+          )}
         />
         {hasNew && (
           <TouchableOpacity
@@ -337,6 +332,5 @@ const styles = StyleSheet.create({
   note: {
     paddingTop: 8,
     padding: 12,
-    borderBottomWidth: 1,
   },
 });

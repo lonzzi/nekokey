@@ -85,18 +85,9 @@ const ProfileInner = ({ user, onRefresh, isRefreshing = false }: ProfileProps) =
 
   const renderNote = useCallback(
     ({ item }: { item: NoteType }) => (
-      <MemoizedNote
-        note={item}
-        queryKey={['notes', user.id]}
-        style={[
-          styles.note,
-          {
-            borderBottomColor: Colors[colorScheme].border,
-          },
-        ]}
-      />
+      <MemoizedNote note={item} queryKey={['notes', user.id]} style={styles.note} />
     ),
-    [user.id, colorScheme],
+    [user.id],
   );
 
   const headerStaticComponent = useMemo(
@@ -171,6 +162,9 @@ const ProfileInner = ({ user, onRefresh, isRefreshing = false }: ProfileProps) =
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: bottomTabHeight }}
       keyExtractor={(item: NoteType) => item.id}
+      ItemSeparatorComponent={() => (
+        <View style={{ height: 1, backgroundColor: Colors[colorScheme].border }} />
+      )}
     />
   );
 };
@@ -294,6 +288,5 @@ const styles = StyleSheet.create({
   note: {
     paddingTop: 8,
     padding: 12,
-    borderBottomWidth: 1,
   },
 });
