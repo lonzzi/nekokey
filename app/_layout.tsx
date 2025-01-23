@@ -1,5 +1,4 @@
 import { MainScrollProvider } from '@/components/MainScrollProvider';
-import { ParallaxScrollProvider } from '@/components/ParallaxFlatList/useParallaxScroll';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { initMisskeyClient } from '@/lib/api';
 import { AuthProvider } from '@/lib/contexts/AuthContext';
@@ -92,25 +91,23 @@ export default function RootLayout() {
           <ShellModeProvider>
             <MainScrollProvider>
               <DrawerProvider>
-                <ParallaxScrollProvider>
-                  <TopTabBarProvider>
-                    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                      <Stack>
-                        <Stack.Screen
-                          name="auth"
-                          options={{
-                            headerShown: false,
-                            // 防止用户通过返回按钮回到登录页
-                            gestureEnabled: false,
-                          }}
-                        />
-                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                        <Stack.Screen name="+not-found" />
-                      </Stack>
-                      <StatusBar style="auto" backgroundColor="transparent" translucent={true} />
-                    </ThemeProvider>
-                  </TopTabBarProvider>
-                </ParallaxScrollProvider>
+                <TopTabBarProvider>
+                  <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                    <Stack>
+                      <Stack.Screen
+                        name="auth"
+                        options={{
+                          headerShown: false,
+                          // 防止用户通过返回按钮回到登录页
+                          gestureEnabled: false,
+                        }}
+                      />
+                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                      <Stack.Screen name="+not-found" />
+                    </Stack>
+                    <StatusBar style="auto" backgroundColor="transparent" translucent={true} />
+                  </ThemeProvider>
+                </TopTabBarProvider>
               </DrawerProvider>
             </MainScrollProvider>
           </ShellModeProvider>

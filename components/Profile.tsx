@@ -1,4 +1,7 @@
-import { useParallaxScroll } from '@/components/ParallaxFlatList/useParallaxScroll';
+import {
+  ParallaxScrollProvider,
+  useParallaxScroll,
+} from '@/components/ParallaxFlatList/useParallaxScroll';
 import { Colors } from '@/constants/Colors';
 import { ServerInfo, useAuth } from '@/lib/contexts/AuthContext';
 import { isIOS } from '@/lib/utils/platform';
@@ -200,7 +203,11 @@ export const Profile = ({
     );
   }
 
-  return <ProfileInner user={user} onRefresh={onRefresh} isRefreshing={isRefreshing} />;
+  return (
+    <ParallaxScrollProvider>
+      <ProfileInner user={user} onRefresh={onRefresh} isRefreshing={isRefreshing} />
+    </ParallaxScrollProvider>
+  );
 };
 
 const styles = StyleSheet.create({
