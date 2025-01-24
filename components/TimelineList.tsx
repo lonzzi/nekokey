@@ -11,7 +11,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useScrollToTop } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Note as NoteType } from 'misskey-js/built/entities';
-import {
+import React, {
   forwardRef,
   memo,
   useCallback,

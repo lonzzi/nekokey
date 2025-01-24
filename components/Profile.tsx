@@ -6,7 +6,7 @@ import { Colors } from '@/constants/Colors';
 import { ServerInfo, useAuth } from '@/lib/contexts/AuthContext';
 import { isIOS } from '@/lib/utils/platform';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import type { Note as NoteType, UserDetailed } from 'misskey-js/built/entities';
 import { memo, useCallback, useEffect, useMemo } from 'react';
@@ -17,6 +17,7 @@ import { Mfm } from './Mfm';
 import { Note } from './Note';
 import ParallaxFlatList from './ParallaxFlatList';
 import { ThemedText } from './ThemedText';
+import { ThemedView } from './ThemedView';
 
 const MemoizedNote = memo(Note);
 
@@ -78,9 +79,31 @@ const ProfileInner = ({ user, onRefresh, isRefreshing = false }: ProfileProps) =
     };
   });
 
-  const { data: notes } = useQuery({
-    queryKey: ['notes', user.id],
-    queryFn: () => misskeyApi?.request('users/notes', { userId: user.id }),
+  const {
+    data: notes,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: [`notes-${user.id}`],
+    queryFn: async ({ pageParam }) => {
+      if (!misskeyApi) throw new Error('API not initialized');
+      return await misskeyApi?.request('users/notes', {
+        userId: user.id,
+        withFiles: true,
+        limit: 15,
+        untilId: pageParam?.untilId,
+      });
+    },
+    initialPageParam: { untilId: undefined, sinceId: undefined } as {
+      untilId?: string;
+      sinceId?: string;
+    },
+    getNextPageParam: (lastPage) => {
+      if (!lastPage || lastPage.length === 0) return undefined;
+      return { untilId: lastPage[lastPage.length - 1].id };
+    },
+    select: (data) => data.pages.flat(),
   });
 
   const renderNote = useCallback(
@@ -102,7 +125,15 @@ const ProfileInner = ({ user, onRefresh, isRefreshing = false }: ProfileProps) =
             />
           </Animated.View>
           <View style={styles.followButtonContainer}>
-            <View style={styles.followButton}>
+            <View
+              style={[
+                styles.followButton,
+                {
+                  borderColor: Colors[colorScheme].border,
+                  backgroundColor: Colors[colorScheme].background,
+                },
+              ]}
+            >
               <Pressable>
                 <ThemedText style={{ fontWeight: 'bold' }}>
                   {authUser?.id === user.id ? '编辑资料' : '关注'}
@@ -116,7 +147,7 @@ const ProfileInner = ({ user, onRefresh, isRefreshing = false }: ProfileProps) =
         <UserStats user={user} />
       </View>
     ),
-    [user, serverInfo, authUser?.id, avatarAnimatedStyle],
+    [user, serverInfo, authUser?.id, avatarAnimatedStyle, colorScheme],
   );
 
   const stickyHeaderComponent = useMemo(
@@ -139,11 +170,11 @@ const ProfileInner = ({ user, onRefresh, isRefreshing = false }: ProfileProps) =
       scrollEventThrottle={1}
       automaticallyAdjustsScrollIndicatorInsets={false}
       onEndReachedThreshold={2}
-      maxToRenderPerBatch={isIOS ? 3 : 1}
+      maxToRenderPerBatch={isIOS ? 5 : 1}
       windowSize={9}
-      updateCellsBatchingPeriod={30}
+      updateCellsBatchingPeriod={40}
       removeClippedSubviews={true}
-      initialNumToRender={5}
+      initialNumToRender={10}
       headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
       headerImage={
         <Image
@@ -165,6 +196,18 @@ const ProfileInner = ({ user, onRefresh, isRefreshing = false }: ProfileProps) =
       ItemSeparatorComponent={() => (
         <View style={{ height: 1, backgroundColor: Colors[colorScheme].border }} />
       )}
+      onEndReached={() => {
+        if (hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      }}
+      ListFooterComponent={() =>
+        hasNextPage ? (
+          <ThemedView style={styles.footerContainer}>
+            <ActivityIndicator size="small" />
+          </ThemedView>
+        ) : null
+      }
     />
   );
 };
@@ -229,12 +272,10 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   followButton: {
-    backgroundColor: 'white',
     borderRadius: 160,
     paddingVertical: 2,
     paddingHorizontal: 24,
-    borderWidth: 1,
-    borderColor: '#E1E8ED',
+    borderWidth: 2,
     alignItems: 'center',
   },
   avatar: {
@@ -288,5 +329,11 @@ const styles = StyleSheet.create({
   note: {
     paddingTop: 8,
     padding: 12,
+  },
+  footerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
 });

@@ -109,6 +109,7 @@ export default function ParallaxFlatList<ItemT>({
             intensity={BLUR_INTENSITY}
             tint={colorScheme === 'dark' ? 'dark' : 'light'}
             style={StyleSheet.absoluteFill}
+            experimentalBlurMethod="dimezisBlurView"
           />
         </Animated.View>
       </Animated.View>
@@ -162,6 +163,7 @@ export default function ParallaxFlatList<ItemT>({
                   intensity={BLUR_INTENSITY}
                   tint={colorScheme === 'dark' ? 'dark' : 'light'}
                   style={StyleSheet.absoluteFill}
+                  experimentalBlurMethod="dimezisBlurView"
                 />
               </Animated.View>
             </Animated.View>
