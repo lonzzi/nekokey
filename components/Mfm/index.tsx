@@ -5,7 +5,7 @@ import { isAndroid } from '@/lib/utils/platform';
 import * as mfm from 'mfm-js';
 import { isMfmBlock } from 'mfm-js/built/node';
 import * as Misskey from 'misskey-js';
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useCallback, useMemo } from 'react';
 import {
   Linking,
   StyleProp,
@@ -117,586 +117,592 @@ export const Mfm: React.FC<MfmRenderProps> = ({
 
   const nodes = parsedNodes ?? (plain ? mfm.parseSimple : mfm.parse)(text);
 
-  const fontSize = StyleSheet.flatten(style)?.fontSize ?? (plain ? 14 : 16);
-  const lineHeight = StyleSheet.flatten(style)?.lineHeight ?? (plain ? 20 : 24);
+  const fontSize = useMemo(
+    () => StyleSheet.flatten(style)?.fontSize ?? (plain ? 14 : 16),
+    [style, plain],
+  );
+  const lineHeight = useMemo(
+    () => StyleSheet.flatten(style)?.lineHeight ?? (plain ? 20 : 24),
+    [style, plain],
+  );
 
-  const renderNode = (node: mfm.MfmNode, index: number, nodes: mfm.MfmNode[]): React.ReactNode => {
-    // const prevNode = index > 0 ? nodes[index - 1] : null;
-    // const nextNode = index < nodes.length - 1 ? nodes[index + 1] : null;
-
-    switch (node.type) {
-      case 'text': {
-        let text = node.props.text.replace(/(\r\n|\n|\r)/g, '\n');
-        if (shouldNyaize) {
-          text = Misskey.nyaize(text);
+  const renderNode = useCallback(
+    (node: mfm.MfmNode): React.ReactNode => {
+      switch (node.type) {
+        case 'text': {
+          let text = node.props.text.replace(/(\r\n|\n|\r)/g, '\n');
+          if (shouldNyaize) {
+            text = Misskey.nyaize(text);
+          }
+          return <Text style={{ color: Colors[colorScheme ?? 'light'].text }}>{text}</Text>;
         }
-        return <Text style={{ color: Colors[colorScheme ?? 'light'].text }}>{text}</Text>;
-      }
 
-      case 'url':
-        return (
-          <Text style={styles.url} onPress={() => Linking.openURL(node.props.url)}>
-            {node.props.url}
-          </Text>
-        );
+        case 'url':
+          return (
+            <Text style={styles.url} onPress={() => Linking.openURL(node.props.url)}>
+              {node.props.url}
+            </Text>
+          );
 
-      case 'link':
-        return (
-          <Text style={styles.url} onPress={() => Linking.openURL(node.props.url)}>
-            {node.children.map((child, i) => {
-              const renderedNode = renderNode(child, i, node.children);
-              if (React.isValidElement(renderedNode)) {
-                return (
-                  <React.Fragment key={i}>
-                    {React.cloneElement(renderedNode as React.ReactElement, {
-                      style: { color: 'inherit' },
-                    })}
-                  </React.Fragment>
-                );
-              }
-              return <React.Fragment key={i}>{renderedNode}</React.Fragment>;
-            })}
-          </Text>
-        );
+        case 'link':
+          return (
+            <Text style={styles.url} onPress={() => Linking.openURL(node.props.url)}>
+              {node.children.map((child, i) => {
+                const renderedNode = renderNode(child);
+                if (React.isValidElement(renderedNode)) {
+                  return (
+                    <React.Fragment key={i}>
+                      {React.cloneElement(renderedNode as React.ReactElement, {
+                        style: { color: 'inherit' },
+                      })}
+                    </React.Fragment>
+                  );
+                }
+                return <React.Fragment key={i}>{renderedNode}</React.Fragment>;
+              })}
+            </Text>
+          );
 
-      case 'mention':
-        return <Text style={styles.mention}>@{node.props.username}</Text>;
+        case 'mention':
+          return <Text style={styles.mention}>@{node.props.username}</Text>;
 
-      case 'hashtag':
-        return <Text style={styles.hashtag}>#{node.props.hashtag}</Text>;
+        case 'hashtag':
+          return <Text style={styles.hashtag}>#{node.props.hashtag}</Text>;
 
-      case 'bold':
-        return (
-          <Text style={styles.bold}>
-            {node.children.map((child, i) => (
-              <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-            ))}
-          </Text>
-        );
-
-      case 'italic':
-        return (
-          <Text style={styles.italic}>
-            {node.children.map((child, i) => (
-              <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-            ))}
-          </Text>
-        );
-
-      case 'strike':
-        return (
-          <Text style={styles.strike}>
-            {node.children.map((child, i) => (
-              <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-            ))}
-          </Text>
-        );
-
-      case 'center': {
-        return (
-          <View
-            style={{
-              width: '100%',
-              flexDirection: 'row',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ fontSize, lineHeight, textAlign: 'center' }}>
+        case 'bold':
+          return (
+            <Text style={styles.bold}>
               {node.children.map((child, i) => (
-                <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
+                <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
               ))}
             </Text>
-          </View>
-        );
-      }
+          );
 
-      case 'small':
-        return (
-          <Text style={styles.small}>
-            {node.children.map((child, i) => (
-              <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-            ))}
-          </Text>
-        );
-
-      case 'quote': {
-        return (
-          <Quote style={style}>
-            {node.children.map((child, i) => (
-              <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-            ))}
-          </Quote>
-        );
-      }
-
-      case 'search':
-        return (
-          <View style={styles.search}>
-            <Text style={styles.searchText}>🔍 {node.props.query}</Text>
-            <Text
-              style={styles.searchButton}
-              onPress={() =>
-                Linking.openURL(
-                  `https://www.google.com/search?q=${encodeURIComponent(node.props.query)}`,
-                )
-              }
-            >
-              Google
+        case 'italic':
+          return (
+            <Text style={styles.italic}>
+              {node.children.map((child, i) => (
+                <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+              ))}
             </Text>
-          </View>
-        );
+          );
 
-      case 'fn': {
-        switch (node.props.name) {
-          case 'serif':
-            return (
-              <Text style={styles.serif}>
+        case 'strike':
+          return (
+            <Text style={styles.strike}>
+              {node.children.map((child, i) => (
+                <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+              ))}
+            </Text>
+          );
+
+        case 'center': {
+          return (
+            <View
+              style={{
+                width: '100%',
+                flexDirection: 'row',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ fontSize, lineHeight, textAlign: 'center' }}>
                 {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
+                  <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                 ))}
               </Text>
-            );
-          case 'monospace':
-            return (
-              <Text style={styles.monospace}>
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                ))}
-              </Text>
-            );
-          case 'blur':
-            return (
-              <Blurred
-                intensity={16}
-                tint={
-                  colorScheme === 'dark'
-                    ? isAndroid
-                      ? 'systemMaterialDark'
-                      : 'dark'
-                    : 'systemChromeMaterialLight'
+            </View>
+          );
+        }
+
+        case 'small':
+          return (
+            <Text style={styles.small}>
+              {node.children.map((child, i) => (
+                <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+              ))}
+            </Text>
+          );
+
+        case 'quote': {
+          return (
+            <Quote style={style}>
+              {node.children.map((child, i) => (
+                <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+              ))}
+            </Quote>
+          );
+        }
+
+        case 'search':
+          return (
+            <View style={styles.search}>
+              <Text style={styles.searchText}>🔍 {node.props.query}</Text>
+              <Text
+                style={styles.searchButton}
+                onPress={() =>
+                  Linking.openURL(
+                    `https://www.google.com/search?q=${encodeURIComponent(node.props.query)}`,
+                  )
                 }
               >
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                ))}
-              </Blurred>
-            );
-          case 'rainbow': {
-            return (
-              <Text style={styles.rainbow}>
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                ))}
+                Google
               </Text>
-            );
-          }
-          case 'x2':
-          case 'x3':
-          case 'x4': {
-            const scale = node.props.name === 'x2' ? 2 : node.props.name === 'x3' ? 3 : 4;
-            return (
-              <Text style={{ fontSize: fontSize * scale, lineHeight: fontSize * scale }}>
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                ))}
-              </Text>
-            );
-          }
-          case 'fg': {
-            let color = validColor(node.props.args.color);
-            color = color ?? 'f00';
-            return (
-              <Text style={{ color: `#${color}` }}>
-                {node.children.map((child, i) => {
-                  const renderedNode = renderNode(child, i, node.children);
-                  if (React.isValidElement(renderedNode)) {
-                    return (
-                      <React.Fragment key={i}>
-                        {React.cloneElement(renderedNode as React.ReactElement, {
-                          style: { color: 'inherit' },
-                        })}
-                      </React.Fragment>
-                    );
-                  }
-                  return <React.Fragment key={i}>{renderedNode}</React.Fragment>;
-                })}
-              </Text>
-            );
-          }
-          case 'bg': {
-            let color = validColor(node.props.args.color);
-            color = color ?? 'f00';
-            return (
-              <View
-                style={{
-                  backgroundColor: `#${color}`,
-                  transform: [{ scale: 1.1 }, { translateX: 1 }, { translateY: 1 }],
-                }}
-              >
-                <Text>
+            </View>
+          );
+
+        case 'fn': {
+          switch (node.props.name) {
+            case 'serif':
+              return (
+                <Text style={styles.serif}>
                   {node.children.map((child, i) => (
-                    <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
+                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                   ))}
                 </Text>
-              </View>
-            );
-          }
-          case 'border': {
-            let color = validColor(node.props.args.color);
-            color = color ? `#${color}` : '#2196F3';
-            const width = safeParseFloat(node.props.args.width) ?? 1;
-            const radius = safeParseFloat(node.props.args.radius) ?? 0;
-            const style = {
-              borderWidth: width,
-              borderColor: color,
-              borderRadius: radius,
-              padding: 4,
-            };
-            return (
-              <View style={style}>
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                ))}
-              </View>
-            );
-          }
-          case 'ruby': {
-            if (node.children.length === 1) {
-              const child = node.children[0];
-              let text = child.type === 'text' ? child.props.text : '';
-              if (shouldNyaize) {
-                text = Misskey.nyaize(text);
-              }
-              const [base, ruby] = text.split(' ');
-              return <RubyText base={base} ruby={ruby} />;
+              );
+            case 'monospace':
+              return (
+                <Text style={styles.monospace}>
+                  {node.children.map((child, i) => (
+                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  ))}
+                </Text>
+              );
+            case 'blur':
+              return (
+                <Blurred
+                  intensity={16}
+                  tint={
+                    colorScheme === 'dark'
+                      ? isAndroid
+                        ? 'systemMaterialDark'
+                        : 'dark'
+                      : 'systemChromeMaterialLight'
+                  }
+                >
+                  {node.children.map((child, i) => (
+                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  ))}
+                </Blurred>
+              );
+            case 'rainbow': {
+              return (
+                <Text style={styles.rainbow}>
+                  {node.children.map((child, i) => (
+                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  ))}
+                </Text>
+              );
             }
-            return <></>;
-          }
-          case 'unixtime': {
-            const child = node.children[0];
-            const unixtime = parseInt(child.type === 'text' ? child.props.text : '0');
-            return (
-              <View style={styles.unixtime}>
-                <Text>🕒 {new Date(unixtime * 1000).toLocaleString()}</Text>
-              </View>
-            );
-          }
-          case 'tada': {
-            const speed =
-              Number((validTime(node.props.args.speed) ?? '1s').replace('s', '')) * 1000;
-            return (
-              <Animated.Text
-                style={[
-                  { fontSize: 24 },
-                  useAnimatedStyle(() => ({
-                    transform: [
-                      {
-                        scale: withRepeat(
-                          withSequence(
-                            withTiming(1.2, { duration: speed * 0.2 }),
-                            withTiming(0.8, { duration: speed * 0.2 }),
-                            withTiming(1, { duration: speed * 0.6 }),
-                          ),
-                          -1,
-                        ),
-                      },
-                    ],
-                  })),
-                ]}
-              >
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                ))}
-              </Animated.Text>
-            );
-          }
-          case 'flip': {
-            const transform =
-              node.props.args.h && node.props.args.v
-                ? [{ scaleX: -1 }, { scaleY: -1 }]
-                : node.props.args.v
-                  ? [{ scaleY: -1 }]
-                  : [{ scaleX: -1 }];
-
-            return (
-              <View style={{ transform: transform }}>
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                ))}
-              </View>
-            );
-          }
-          case 'rotate': {
-            const angle = safeParseFloat(node.props.args.deg) ?? 90;
-            return (
-              <View
-                style={{
-                  transform: [{ rotate: `${angle}deg` }],
-                }}
-              >
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                ))}
-              </View>
-            );
-          }
-          case 'position': {
-            const x = safeParseFloat(node.props.args.x) ?? 0;
-            const y = safeParseFloat(node.props.args.y) ?? 0;
-            return (
-              <View
-                style={{
-                  transform: [{ translateX: x * fontSize }, { translateY: y * fontSize }],
-                  zIndex: 1,
-                }}
-              >
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                ))}
-              </View>
-            );
-          }
-          case 'scale': {
-            const x = Math.min(safeParseFloat(node.props.args.x) ?? 1, 5);
-            const y = Math.min(safeParseFloat(node.props.args.y) ?? 1, 5);
-            return (
-              <View
-                style={{
-                  transform: [{ scaleX: x }, { scaleY: y }],
-                }}
-              >
-                {node.children.map((child, i) => (
-                  <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                ))}
-              </View>
-            );
-          }
-          case 'jelly':
-          case 'twitch':
-          case 'shake':
-          case 'spin':
-          case 'jump':
-          case 'bounce': {
-            const speed =
-              Number((validTime(node.props.args.speed) ?? '0.5s').replace('s', '')) * 1000;
-
-            switch (node.props.name) {
-              case 'shake': {
-                return (
-                  <Animated.View
-                    style={useAnimatedStyle(() => ({
-                      transform: [
-                        {
-                          translateX: withRepeat(
-                            withSequence(
-                              withTiming(5, { duration: speed / 4 }),
-                              withTiming(-5, { duration: speed / 4 }),
-                              withTiming(0, { duration: speed / 2 }),
-                            ),
-                            -1,
-                          ),
-                        },
-                      ],
-                    }))}
-                  >
+            case 'x2':
+            case 'x3':
+            case 'x4': {
+              const scale = node.props.name === 'x2' ? 2 : node.props.name === 'x3' ? 3 : 4;
+              return (
+                <Text style={{ fontSize: fontSize * scale, lineHeight: fontSize * scale }}>
+                  {node.children.map((child, i) => (
+                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  ))}
+                </Text>
+              );
+            }
+            case 'fg': {
+              let color = validColor(node.props.args.color);
+              color = color ?? 'f00';
+              return (
+                <Text style={{ color: `#${color}` }}>
+                  {node.children.map((child, i) => {
+                    const renderedNode = renderNode(child);
+                    if (React.isValidElement(renderedNode)) {
+                      return (
+                        <React.Fragment key={i}>
+                          {React.cloneElement(renderedNode as React.ReactElement, {
+                            style: { color: 'inherit' },
+                          })}
+                        </React.Fragment>
+                      );
+                    }
+                    return <React.Fragment key={i}>{renderedNode}</React.Fragment>;
+                  })}
+                </Text>
+              );
+            }
+            case 'bg': {
+              let color = validColor(node.props.args.color);
+              color = color ?? 'f00';
+              return (
+                <View
+                  style={{
+                    backgroundColor: `#${color}`,
+                    transform: [{ scale: 1.1 }, { translateX: 1 }, { translateY: 1 }],
+                  }}
+                >
+                  <Text>
                     {node.children.map((child, i) => (
-                      <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
+                      <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
                     ))}
-                  </Animated.View>
-                );
+                  </Text>
+                </View>
+              );
+            }
+            case 'border': {
+              let color = validColor(node.props.args.color);
+              color = color ? `#${color}` : '#2196F3';
+              const width = safeParseFloat(node.props.args.width) ?? 1;
+              const radius = safeParseFloat(node.props.args.radius) ?? 0;
+              const style = {
+                borderWidth: width,
+                borderColor: color,
+                borderRadius: radius,
+                padding: 4,
+              };
+              return (
+                <View style={style}>
+                  {node.children.map((child, i) => (
+                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  ))}
+                </View>
+              );
+            }
+            case 'ruby': {
+              if (node.children.length === 1) {
+                const child = node.children[0];
+                let text = child.type === 'text' ? child.props.text : '';
+                if (shouldNyaize) {
+                  text = Misskey.nyaize(text);
+                }
+                const [base, ruby] = text.split(' ');
+                return <RubyText base={base} ruby={ruby} />;
               }
-
-              case 'spin': {
-                return (
-                  <Animated.View
-                    style={useAnimatedStyle(() => ({
-                      transform: [
-                        {
-                          rotate: withRepeat(withTiming('360deg', { duration: speed }), -1),
-                        },
-                      ],
-                    }))}
-                  >
-                    {node.children.map((child, i) => (
-                      <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                    ))}
-                  </Animated.View>
-                );
-              }
-
-              case 'jump': {
-                return (
-                  <Animated.View
-                    style={useAnimatedStyle(() => ({
-                      transform: [
-                        {
-                          translateY: withRepeat(
-                            withSequence(
-                              withTiming(-10, { duration: speed / 2 }),
-                              withTiming(0, { duration: speed / 2 }),
-                            ),
-                            -1,
-                          ),
-                        },
-                      ],
-                    }))}
-                  >
-                    {node.children.map((child, i) => (
-                      <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                    ))}
-                  </Animated.View>
-                );
-              }
-
-              case 'bounce': {
-                return (
-                  <Animated.View
-                    style={useAnimatedStyle(() => ({
-                      transform: [
-                        {
-                          translateY: withRepeat(
-                            withSequence(
-                              withTiming(0, { duration: speed / 3 }),
-                              withTiming(-15, { duration: speed / 3 }),
-                              withTiming(0, { duration: speed / 3 }),
-                            ),
-                            -1,
-                          ),
-                        },
-                      ],
-                    }))}
-                  >
-                    {node.children.map((child, i) => (
-                      <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                    ))}
-                  </Animated.View>
-                );
-              }
-
-              case 'jelly': {
-                return (
-                  <Animated.View
-                    style={useAnimatedStyle(() => ({
+              return <></>;
+            }
+            case 'unixtime': {
+              const child = node.children[0];
+              const unixtime = parseInt(child.type === 'text' ? child.props.text : '0');
+              return (
+                <View style={styles.unixtime}>
+                  <Text>🕒 {new Date(unixtime * 1000).toLocaleString()}</Text>
+                </View>
+              );
+            }
+            case 'tada': {
+              const speed =
+                Number((validTime(node.props.args.speed) ?? '1s').replace('s', '')) * 1000;
+              return (
+                <Animated.Text
+                  style={[
+                    { fontSize: 24 },
+                    useAnimatedStyle(() => ({
                       transform: [
                         {
                           scale: withRepeat(
                             withSequence(
-                              withTiming(1.1, { duration: speed / 3 }),
-                              withTiming(0.9, { duration: speed / 3 }),
-                              withTiming(1, { duration: speed / 3 }),
+                              withTiming(1.2, { duration: speed * 0.2 }),
+                              withTiming(0.8, { duration: speed * 0.2 }),
+                              withTiming(1, { duration: speed * 0.6 }),
                             ),
                             -1,
                           ),
                         },
                       ],
-                    }))}
-                  >
-                    {node.children.map((child, i) => (
-                      <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                    ))}
-                  </Animated.View>
-                );
-              }
-
-              case 'twitch': {
-                return (
-                  <Animated.View
-                    style={useAnimatedStyle(() => ({
-                      transform: [
-                        {
-                          translateX: withRepeat(
-                            withSequence(
-                              withTiming(2, { duration: speed / 8 }),
-                              withTiming(-2, { duration: speed / 8 }),
-                              withTiming(0, { duration: speed / 4 }),
-                            ),
-                            -1,
-                          ),
-                        },
-                        {
-                          translateY: withRepeat(
-                            withSequence(
-                              withTiming(-1, { duration: speed / 8 }),
-                              withTiming(1, { duration: speed / 8 }),
-                              withTiming(0, { duration: speed / 4 }),
-                            ),
-                            -1,
-                          ),
-                        },
-                      ],
-                    }))}
-                  >
-                    {node.children.map((child, i) => (
-                      <React.Fragment key={i}>{renderNode(child, i, node.children)}</React.Fragment>
-                    ))}
-                  </Animated.View>
-                );
-              }
-
-              default:
-                return <></>;
+                    })),
+                  ]}
+                >
+                  {node.children.map((child, i) => (
+                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  ))}
+                </Animated.Text>
+              );
             }
+            case 'flip': {
+              const transform =
+                node.props.args.h && node.props.args.v
+                  ? [{ scaleX: -1 }, { scaleY: -1 }]
+                  : node.props.args.v
+                    ? [{ scaleY: -1 }]
+                    : [{ scaleX: -1 }];
+
+              return (
+                <View style={{ transform: transform }}>
+                  {node.children.map((child, i) => (
+                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  ))}
+                </View>
+              );
+            }
+            case 'rotate': {
+              const angle = safeParseFloat(node.props.args.deg) ?? 90;
+              return (
+                <View
+                  style={{
+                    transform: [{ rotate: `${angle}deg` }],
+                  }}
+                >
+                  {node.children.map((child, i) => (
+                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  ))}
+                </View>
+              );
+            }
+            case 'position': {
+              const x = safeParseFloat(node.props.args.x) ?? 0;
+              const y = safeParseFloat(node.props.args.y) ?? 0;
+              return (
+                <View
+                  style={{
+                    transform: [{ translateX: x * fontSize }, { translateY: y * fontSize }],
+                    zIndex: 1,
+                  }}
+                >
+                  {node.children.map((child, i) => (
+                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  ))}
+                </View>
+              );
+            }
+            case 'scale': {
+              const x = Math.min(safeParseFloat(node.props.args.x) ?? 1, 5);
+              const y = Math.min(safeParseFloat(node.props.args.y) ?? 1, 5);
+              return (
+                <View
+                  style={{
+                    transform: [{ scaleX: x }, { scaleY: y }],
+                  }}
+                >
+                  {node.children.map((child, i) => (
+                    <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                  ))}
+                </View>
+              );
+            }
+            case 'jelly':
+            case 'twitch':
+            case 'shake':
+            case 'spin':
+            case 'jump':
+            case 'bounce': {
+              const speed =
+                Number((validTime(node.props.args.speed) ?? '0.5s').replace('s', '')) * 1000;
+
+              switch (node.props.name) {
+                case 'shake': {
+                  return (
+                    <Animated.View
+                      style={useAnimatedStyle(() => ({
+                        transform: [
+                          {
+                            translateX: withRepeat(
+                              withSequence(
+                                withTiming(5, { duration: speed / 4 }),
+                                withTiming(-5, { duration: speed / 4 }),
+                                withTiming(0, { duration: speed / 2 }),
+                              ),
+                              -1,
+                            ),
+                          },
+                        ],
+                      }))}
+                    >
+                      {node.children.map((child, i) => (
+                        <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                      ))}
+                    </Animated.View>
+                  );
+                }
+
+                case 'spin': {
+                  return (
+                    <Animated.View
+                      style={useAnimatedStyle(() => ({
+                        transform: [
+                          {
+                            rotate: withRepeat(withTiming('360deg', { duration: speed }), -1),
+                          },
+                        ],
+                      }))}
+                    >
+                      {node.children.map((child, i) => (
+                        <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                      ))}
+                    </Animated.View>
+                  );
+                }
+
+                case 'jump': {
+                  return (
+                    <Animated.View
+                      style={useAnimatedStyle(() => ({
+                        transform: [
+                          {
+                            translateY: withRepeat(
+                              withSequence(
+                                withTiming(-10, { duration: speed / 2 }),
+                                withTiming(0, { duration: speed / 2 }),
+                              ),
+                              -1,
+                            ),
+                          },
+                        ],
+                      }))}
+                    >
+                      {node.children.map((child, i) => (
+                        <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                      ))}
+                    </Animated.View>
+                  );
+                }
+
+                case 'bounce': {
+                  return (
+                    <Animated.View
+                      style={useAnimatedStyle(() => ({
+                        transform: [
+                          {
+                            translateY: withRepeat(
+                              withSequence(
+                                withTiming(0, { duration: speed / 3 }),
+                                withTiming(-15, { duration: speed / 3 }),
+                                withTiming(0, { duration: speed / 3 }),
+                              ),
+                              -1,
+                            ),
+                          },
+                        ],
+                      }))}
+                    >
+                      {node.children.map((child, i) => (
+                        <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                      ))}
+                    </Animated.View>
+                  );
+                }
+
+                case 'jelly': {
+                  return (
+                    <Animated.View
+                      style={useAnimatedStyle(() => ({
+                        transform: [
+                          {
+                            scale: withRepeat(
+                              withSequence(
+                                withTiming(1.1, { duration: speed / 3 }),
+                                withTiming(0.9, { duration: speed / 3 }),
+                                withTiming(1, { duration: speed / 3 }),
+                              ),
+                              -1,
+                            ),
+                          },
+                        ],
+                      }))}
+                    >
+                      {node.children.map((child, i) => (
+                        <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                      ))}
+                    </Animated.View>
+                  );
+                }
+
+                case 'twitch': {
+                  return (
+                    <Animated.View
+                      style={useAnimatedStyle(() => ({
+                        transform: [
+                          {
+                            translateX: withRepeat(
+                              withSequence(
+                                withTiming(2, { duration: speed / 8 }),
+                                withTiming(-2, { duration: speed / 8 }),
+                                withTiming(0, { duration: speed / 4 }),
+                              ),
+                              -1,
+                            ),
+                          },
+                          {
+                            translateY: withRepeat(
+                              withSequence(
+                                withTiming(-1, { duration: speed / 8 }),
+                                withTiming(1, { duration: speed / 8 }),
+                                withTiming(0, { duration: speed / 4 }),
+                              ),
+                              -1,
+                            ),
+                          },
+                        ],
+                      }))}
+                    >
+                      {node.children.map((child, i) => (
+                        <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+                      ))}
+                    </Animated.View>
+                  );
+                }
+
+                default:
+                  return <></>;
+              }
+            }
+
+            default:
+              return <></>;
           }
-
-          default:
-            return <></>;
         }
-      }
 
-      case 'inlineCode':
-        return (
-          <View style={styles.inlineCode}>
-            <Text
-              style={{
-                fontFamily: 'monospace',
-              }}
-            >
-              {node.props.code}
-            </Text>
-          </View>
-        );
+        case 'inlineCode':
+          return (
+            <View style={styles.inlineCode}>
+              <Text
+                style={{
+                  fontFamily: 'monospace',
+                }}
+              >
+                {node.props.code}
+              </Text>
+            </View>
+          );
 
-      case 'blockCode':
-        return <CodeHighlighter code={node.props.code} />;
+        case 'blockCode':
+          return <CodeHighlighter code={node.props.code} />;
 
-      case 'mathInline':
-        return (
-          <View style={styles.mathInline}>
-            <Text style={{ fontFamily: 'monospace' }}>{node.props.formula}</Text>
-          </View>
-        );
+        case 'mathInline':
+          return (
+            <View style={styles.mathInline}>
+              <Text style={{ fontFamily: 'monospace' }}>{node.props.formula}</Text>
+            </View>
+          );
 
-      case 'emojiCode': {
-        const emojiUrl =
-          emojiUrls[node.props.name] ?? getEmoji(serverInfo?.emojis, node.props.name);
-        return (
-          <CustomEmoji
-            emojiName={node.props.name}
-            emojiUrl={emojiUrl}
-            height={lineHeight}
-            plain={plain}
-          />
-        );
-      }
-
-      case 'unicodeEmoji':
-        return <TwEmoji text={node.props.emoji} height={(lineHeight * 5) / 6} />;
-
-      default:
-        if (node.children) {
-          return node.children.map((child, i) => (
-            <React.Fragment key={i}>{renderNode(child, i, nodes)}</React.Fragment>
-          ));
+        case 'emojiCode': {
+          const emojiUrl =
+            emojiUrls[node.props.name] ?? getEmoji(serverInfo?.emojis, node.props.name);
+          return (
+            <CustomEmoji
+              emojiName={node.props.name}
+              emojiUrl={emojiUrl}
+              height={lineHeight}
+              plain={plain}
+            />
+          );
         }
-        return <></>;
-    }
-  };
+
+        case 'unicodeEmoji':
+          return <TwEmoji text={node.props.emoji} height={(lineHeight * 5) / 6} />;
+
+        default:
+          if (node.children) {
+            return node.children.map((child, i) => (
+              <React.Fragment key={i}>{renderNode(child)}</React.Fragment>
+            ));
+          }
+          return <></>;
+      }
+    },
+    [style, emojiUrls, serverInfo?.emojis, fontSize, lineHeight, plain, shouldNyaize, colorScheme],
+  );
 
   if (plain) {
     return (
       <Text style={[style, { color: Colors[colorScheme ?? 'light'].text }]} selectable {...props}>
         {nodes.map((node, i) => (
-          <React.Fragment key={i}>{renderNode(node, i, nodes)}</React.Fragment>
+          <React.Fragment key={i}>{renderNode(node)}</React.Fragment>
         ))}
       </Text>
     );

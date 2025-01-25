@@ -148,8 +148,12 @@ const ReactionViewer = ({
 
 const NoteContent = ({ note, size = 'normal' }: { note: NoteType; size?: 'small' | 'normal' }) => {
   const { serverInfo } = useAuth();
-  const emojiUrls = Object.fromEntries(
-    Object.entries(serverInfo?.emojis || {}).map(([, emoji]) => [emoji.name, emoji.url]),
+  const emojiUrls = React.useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(serverInfo?.emojis || {}).map(([, emoji]) => [emoji.name, emoji.url]),
+      ),
+    [serverInfo?.emojis],
   );
 
   const textStyle = {
