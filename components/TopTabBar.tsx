@@ -78,6 +78,17 @@ function TopTabBar({
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[styles.clearButton, { right: 96 }]}
+          onPress={() => {
+            console.log('click');
+          }}
+        >
+          <Animated.Text style={[styles.clearButtonText, { color: colors.primary }]}>
+            click
+          </Animated.Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={styles.logoutButton}
           onPress={async () => {
             await logout();
