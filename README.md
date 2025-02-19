@@ -9,8 +9,8 @@ The following features are currently under development:
 - [ ] App Icon
 - [x] Support for user lists and role-based timelines
 - [ ] Notification timeline with real-time updates
-- [ ] Custom emoji reactions
-- [ ] User profile
+- [x] Custom emoji reactions
+- [x] User profile
 - [ ] Video play support
 
 ## Features
