@@ -34,12 +34,7 @@ jobs:
 
       - name: Run Expo Prebuild
         run: |
-          npx expo prebuild --platform ios --no-install
-
-      - name: Install CocoaPods
-        run: |
-          cd ios
-          pod install
+          npx expo prebuild -p ios
 
       - name: Build Unsigned Archive
         run: |
