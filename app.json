@@ -54,7 +54,8 @@
           },
           "ios": {}
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
