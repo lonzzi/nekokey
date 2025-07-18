@@ -55,7 +55,15 @@
           "ios": {}
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "react-native",
+          "organization": "ronki"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

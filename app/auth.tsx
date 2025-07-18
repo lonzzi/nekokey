@@ -88,7 +88,7 @@ export default function AuthScreen() {
     },
     onSuccess: async ({ token, server }) => {
       await login(token, server);
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/(home)');
     },
     onError: (error) => {
       console.error(t('error.authProcessError'), error);

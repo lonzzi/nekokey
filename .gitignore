@@ -40,6 +40,6 @@ app-example
 # idea
 .idea
 
-# Android & iOS
-android/
-ios/
+.env.local
+
+.env.local

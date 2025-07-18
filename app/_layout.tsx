@@ -22,6 +22,24 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import '../global.css';
 import '../i18n/config';
 
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://b708d8a911f85a18889cc885f31febfa@o4509609481666560.ingest.de.sentry.io/4509609482977360',
+
+  // Adds more context data to events (IP address, cookies, user, etc.)
+  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+  sendDefaultPii: true,
+
+  // Configure Session Replay
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1,
+  integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
+
+  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
+  // spotlight: __DEV__,
+});
+
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
@@ -49,7 +67,7 @@ persistQueryClient({
   buster: '1', // 版本号，当需要清除所有缓存时可以更改
 });
 
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -115,4 +133,4 @@ export default function RootLayout() {
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
-}
+});
