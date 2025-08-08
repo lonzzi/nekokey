@@ -32,9 +32,13 @@ jobs:
         run: |
           npm install
 
+      # - name: Run Expo Prebuild
+      #   run: |
+      #     npx expo prebuild -p ios
+
       - name: Run Expo Prebuild
         run: |
-          npx expo prebuild -p ios
+          npm run ios
 
       - name: Build Unsigned Archive
         run: |
